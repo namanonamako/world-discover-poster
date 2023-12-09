@@ -1,9 +1,11 @@
-name: Deploy to GitHub Pages
+name: Publish GitHub Pages
 
 on:
   push:
-    branches:
-      - main  # メインブランチにプッシュされたときに実行
+
+# 書き込み権限の付与
+permissions:
+  contents: write
 
 jobs:
   deploy:
@@ -12,10 +14,10 @@ jobs:
     steps:
     - name: Copy External Images
       run: |
-        mkdir -p images
-        mkdir -p images/PC
-        mkdir -p images/Quest
-        curl -o images/PC/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
+        mkdir -p ./images
+        mkdir -p ./images/PC
+        mkdir -p ./images/Quest
+        curl -o ./images/PC/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
