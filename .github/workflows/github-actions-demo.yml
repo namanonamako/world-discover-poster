@@ -13,6 +13,8 @@ jobs:
     - name: Copy External Images
       run: |
         mkdir -p images
+        mkdir -p images/PC
+        mkdir -p images/Quest
         curl -o images/PC/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
 
     - name: Deploy to GitHub Pages
