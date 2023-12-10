@@ -2,24 +2,34 @@ name: Publish GitHub Pages
 
 on:
   push:
-
-# 書き込み権限の付与
-permissions:
-  contents: write
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
     steps:
     - name: Copy External Images
-      run: |
+      - run: |
         mkdir -p ./images
         curl -o ./images/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
-        echo "hello, world!" > ./images/index.html
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my_site
+          path: ./images
+      - uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./images
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./images
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v1
+        id: deployment
