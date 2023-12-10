@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Copy External Images
       - run: |
-        mkdir -p images
+        mkdir images
         curl -o images/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
       - uses: actions/upload-artifact@v3
         with:
