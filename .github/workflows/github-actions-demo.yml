@@ -19,7 +19,7 @@ jobs:
           path: images
       - uses: actions/upload-pages-artifact@v1
         with:
-          path: ./images
+          path: images
 
   deploy:
     needs: build
