@@ -11,12 +11,12 @@ jobs:
     steps:
       - name: Copy External Images
       - run: |
-        mkdir -p ./images
-        curl -o ./images/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
+        mkdir -p images
+        curl -o images/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
       - uses: actions/upload-artifact@v3
         with:
           name: my_site
-          path: ./images
+          path: images
       - uses: actions/upload-pages-artifact@v1
         with:
           path: ./images
