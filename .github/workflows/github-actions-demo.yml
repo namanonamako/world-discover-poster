@@ -14,7 +14,10 @@ jobs:
       - name: Copy External Images
         run: |
           mkdir images
-          curl -o images/0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/0.jpg
+          curl -o images/PC_0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/PC_0.jpg
+          curl -o images/PC_1.jpg http://keisotsuna.servebeer.com:9000/PCWorld/PC_1.jpg
+          curl -o images/Quest_0.jpg http://keisotsuna.servebeer.com:9000/PCWorld/Quest_0.jpg
+          curl -o images/Quest_1.jpg http://keisotsuna.servebeer.com:9000/PCWorld/Quest_1.jpg
       - uses: actions/upload-artifact@v3
         with:
           name: my_site
