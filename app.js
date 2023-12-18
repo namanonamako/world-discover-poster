@@ -65,7 +65,7 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
 
 const pc_work_dir_path = "work/PCWorldPic/";
 const quest_work_dir_path = "work/QuestWorldPic/";
-const final_dir_path = "images/world-recommendation-poster/";
+const final_dir_path = "images/";
 
 async function main() {
     await create_merged_picture(pc_work_dir_path, path.join(final_dir_path, "PC_0.jpg"), 0);
