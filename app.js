@@ -13,18 +13,23 @@ const tileHeight = 800;
  */
 async function load_image_and_draw(context, imagePath, rowIndex, colIndex) {
     const { loadImage } = require('@napi-rs/canvas');
-    var image = await loadImage(imagePath);
-    // 配置する画像の幅と高さ
-    const imageWidth = tileWidth;
-    const imageHeight = Math.min(image.height, tileHeight);
-
-    // 画像をタイルサイズに合わせてクロップして描画
-    context.drawImage(
-        image,
-        0, 0, imageWidth, imageHeight,  // クロップする部分の座標とサイズ
-        rowIndex * tileWidth, colIndex * tileHeight, imageWidth, imageHeight  // 描画する座標とサイズ
-    );
-    image = null;
+    try {
+        var image = await loadImage(imagePath);
+        // 配置する画像の幅と高さ
+        const imageWidth = tileWidth;
+        const imageHeight = Math.min(image.height, tileHeight);
+        // 画像をタイルサイズに合わせてクロップして描画
+        context.drawImage(
+            image,
+            0, 0, imageWidth, imageHeight,  // クロップする部分の座標とサイズ
+            rowIndex * tileWidth, colIndex * tileHeight, imageWidth, imageHeight  // 描画する座標とサイズ
+        );
+    } catch (e) {
+        console.log(e);
+        console.log(`${imagePath} draw failed`);
+    } finally {
+        image = null;
+    }
 }
 
 /**
