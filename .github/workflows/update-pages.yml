@@ -28,7 +28,8 @@ jobs:
           path: ~/.npm
           key: npm-${{ hashFiles('package-lock.json') }}
           restore-keys: npm-
-      # 実際のコマンド
+      - name: Install npm Package
+        run: npm install
       - name: copyfiles
         run: |
           curl -o work/PCWorldPic/0.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/0.jpg
@@ -51,7 +52,6 @@ jobs:
           curl -o work/QuestWorldPic/7.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/7.jpg
           curl -o work/QuestWorldPic/8.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/8.jpg
           curl -o work/QuestWorldPic/9.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/9.jpg
-      # 実際のコマンド
       - name: start action...
         run: >
           node app.js          
