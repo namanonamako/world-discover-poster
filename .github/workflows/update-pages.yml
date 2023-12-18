@@ -64,7 +64,7 @@ jobs:
           path: images
       - uses: actions/upload-pages-artifact@v1
         with:
-          path: images
+          path: images/world-recommendation-poster
 
   deploy:
     needs: build
