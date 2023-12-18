@@ -59,7 +59,7 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
     const pngData = await canvas.encode('png');
     await fs.promises.writeFile(exporetfilePath, pngData);
 
-    console.log(`file${exporetfilePath} exists is ${fs.existsSync(filePath)}`);
+    console.log(`file${exporetfilePath} exists is ${fs.existsSync(exporetfilePath)}`);
     // キャンバスの破棄
     context = null;
     canvas = null;
