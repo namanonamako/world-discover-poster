@@ -14,7 +14,6 @@ const tileHeight = 800;
 async function load_image_and_draw(context, imagePath, rowIndex, colIndex) {
     const { loadImage } = require('@napi-rs/canvas');
     var image = await loadImage(imagePath);
-    console.log(`image:${imagePath}`);
     // 配置する画像の幅と高さ
     const imageWidth = tileWidth;
     const imageHeight = Math.min(image.height, tileHeight);
@@ -49,7 +48,6 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
     context.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < rows * cols; i++) {
         const filePath = path.join(sourceDirectoryPath, `${i + imageID * (rows * cols)}.jpg`);
-        console.log(`file${filePath} exists is ${fs.existsSync(filePath)}`);
         if (fs.existsSync(filePath)) {
             await load_image_and_draw(context, filePath, i % (rows + 1), Math.floor(i / cols));
         } else {
@@ -59,7 +57,6 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
     const pngData = await canvas.encode('png');
     await fs.promises.writeFile(exporetfilePath, pngData);
 
-    console.log(`file${exporetfilePath} exists is ${fs.existsSync(exporetfilePath)}`);
     // キャンバスの破棄
     context = null;
     canvas = null;
@@ -67,13 +64,14 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
 }
 
 const pc_work_dir_path = "work/PCWorldPic/";
-//const quest_work_dir_path = "work/world-recommendation-poster/QuestWorldPic/";
-const final_dir_path = "images/world-recommendation-poster/";
+const quest_work_dir_path = "work/QuestWorldPic/";
+const final_dir_path = "images/";
 
 async function main() {
-    console.log("Start");
     await create_merged_picture(pc_work_dir_path, path.join(final_dir_path, "PC_0.jpg"), 0);
-    console.log("Enc");
+    await create_merged_picture(pc_work_dir_path, path.join(final_dir_path, "PC_1.jpg"), 1);
+    await create_merged_picture(quest_work_dir_path, path.join(final_dir_path, "Quest_0.jpg"), 0);
+    await create_merged_picture(quest_work_dir_path, path.join(final_dir_path, "Quest_1.jpg"), 1);
 
 }
 
