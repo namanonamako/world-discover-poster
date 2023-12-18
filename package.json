@@ -1,0 +1,23 @@
+{
+  "name": "world-recommendation-poster",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/namanonamako/world-recommendation-poster.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/namanonamako/world-recommendation-poster/issues"
+  },
+  "homepage": "https://github.com/namanonamako/world-recommendation-poster#readme",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.44",
+    "path": "^0.12.7"
+  }
+}

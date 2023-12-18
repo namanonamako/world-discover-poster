@@ -1,0 +1,66 @@
+name: Publish GitHub Pages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+      # キャッシュ
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+      # 実際のコマンド
+      - name: start action...
+        run: > 
+          curl -o work/PCWorldPic/0.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/0.jpg
+          curl -o work/PCWorldPic/1.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/1.jpg
+          curl -o work/PCWorldPic/2.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/2.jpg
+          curl -o work/PCWorldPic/3.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/3.jpg
+          curl -o work/PCWorldPic/4.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/4.jpg
+          curl -o work/PCWorldPic/5.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/5.jpg
+          curl -o work/PCWorldPic/6.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/6.jpg
+          curl -o work/PCWorldPic/7.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/7.jpg
+          curl -o work/PCWorldPic/8.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/8.jpg
+          curl -o work/PCWorldPic/9.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/9.jpg
+          curl -o work/QuestWorldPic/0.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/0.jpg
+          curl -o work/QuestWorldPic/1.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/1.jpg
+          curl -o work/QuestWorldPic/2.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/2.jpg
+          curl -o work/QuestWorldPic/3.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/3.jpg
+          curl -o work/QuestWorldPic/4.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/4.jpg
+          curl -o work/QuestWorldPic/5.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/5.jpg
+          curl -o work/QuestWorldPic/6.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/6.jpg
+          curl -o work/QuestWorldPic/7.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/7.jpg
+          curl -o work/QuestWorldPic/8.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/8.jpg
+          curl -o work/QuestWorldPic/9.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/9.jpg
+          node app.js
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my_site
+          path: images
+      - uses: actions/upload-pages-artifact@v1
+        with:
+          path: images
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v1
+        id: deployment
