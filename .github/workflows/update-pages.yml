@@ -58,6 +58,7 @@ jobs:
           curl -o work/QuestWorldPic/9.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/9.jpg
           curl -o work/QuestWorldPic/10.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/10.jpg
           curl -o work/QuestWorldPic/11.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/11.jpg
+          curl -o images/posterInfo.json http://keisotsuna.servebeer.com:9000/posterInfo.json
       - name: start action...
         run: >
           node app.js
