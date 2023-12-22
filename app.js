@@ -78,6 +78,59 @@ async function main() {
     await create_merged_picture(quest_work_dir_path, path.join(final_dir_path, "Quest_0.jpg"), 0);
     await create_merged_picture(quest_work_dir_path, path.join(final_dir_path, "Quest_1.jpg"), 1);
 
+    test();
 }
+// #regiton test
+
+/**
+ * URLからTweet画像を生成する
+ * @param {Browser} browser 生成に使うpuppeteerのブラウザ
+ * @param {string} tweetUrl 生成元のURL
+ * @param {string} path 生成した画像の保存先パス
+ */
+async function screenshot_tweet_pic(tweetUrl, path) {
+    const axios = require("axios");
+    const puppeteer = require('puppeteer');
+
+    await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false`).then(async response => {
+        let browser;
+        try {
+            browser = await puppeteer.launch({ headless: 'new', args: ['--disable-gpu', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox'] });
+            const page = await browser.newPage();
+            // デバッグ用に console.log を nodejs 側に渡す
+            page.on('console', msg => console.log(msg.text()));
+            // Twitterの埋め込みリンクを開く
+            await page.setContent(response.data.html, { waitUntil: 'domcontentloaded' });
+            console.log(`リンクを開きました。`);
+            const iframeHandle = await page.waitForSelector('#twitter-widget-0');
+            console.log(`フレームの準備ができました。`);
+            const frame = await iframeHandle.contentFrame();
+            console.log(`フレームを取得しました。`);
+            await frame.waitForNavigation({ waitUntil: 'networkidle0' });
+            //await page.waitForTimeout(10000);
+            console.log(`フレームの描画が完了しました。`);
+
+            await page.setViewport({ width: Math.ceil(550), height: Math.ceil(800) });
+            console.log(`キャプチャ範囲をコンテンツサイズに合わせました`);
+            await page.screenshot({ path: path });
+            console.log(`キャプチャしました`);
+        } catch (e) {
+            console.log("キャプチャに失敗しました。");
+            // throw e;
+        } finally {
+            await browser.close();
+        }
+    });
+}
+async function test() {
+    for (var i = 0; i < 12; i++) {
+        await screenshot_tweet_pic("https://twitter.com/medic35351/status/1738140908447731881", path.join(final_dir_path, `testPC_${i}.jpg`));
+    }
+    for (var i = 0; i < 12; i++) {
+        await screenshot_tweet_pic("https://x.com/maybecat101/status/1737773081392033907", path.join(final_dir_path, `testQuest_${i}.jpg`));
+    }    
+}
+
+// #endregion
 
 main();
