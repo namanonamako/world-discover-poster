@@ -34,31 +34,36 @@ jobs:
         run: npm install
       - name: copyfiles
         run: |
-          curl -o work/PCWorldPic/0.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/0.jpg
-          curl -o work/PCWorldPic/1.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/1.jpg
-          curl -o work/PCWorldPic/2.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/2.jpg
-          curl -o work/PCWorldPic/3.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/3.jpg
-          curl -o work/PCWorldPic/4.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/4.jpg
-          curl -o work/PCWorldPic/5.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/5.jpg
-          curl -o work/PCWorldPic/6.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/6.jpg
-          curl -o work/PCWorldPic/7.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/7.jpg
-          curl -o work/PCWorldPic/8.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/8.jpg
-          curl -o work/PCWorldPic/9.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/9.jpg
-          curl -o work/PCWorldPic/10.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/10.jpg
-          curl -o work/PCWorldPic/11.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/PC/11.jpg
-          curl -o work/QuestWorldPic/0.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/0.jpg
-          curl -o work/QuestWorldPic/1.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/1.jpg
-          curl -o work/QuestWorldPic/2.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/2.jpg
-          curl -o work/QuestWorldPic/3.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/3.jpg
-          curl -o work/QuestWorldPic/4.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/4.jpg
-          curl -o work/QuestWorldPic/5.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/5.jpg
-          curl -o work/QuestWorldPic/6.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/6.jpg
-          curl -o work/QuestWorldPic/7.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/7.jpg
-          curl -o work/QuestWorldPic/8.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/8.jpg
-          curl -o work/QuestWorldPic/9.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/9.jpg
-          curl -o work/QuestWorldPic/10.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/10.jpg
-          curl -o work/QuestWorldPic/11.jpg http://keisotsuna.servebeer.com:9000/world-recommendation-poster/Quest/11.jpg
-          curl -o images/posterInfo.json http://keisotsuna.servebeer.com:9000/posterInfo.json
+          curl -o work/base_PC_0.jpg https://namanonamako.github.io/poster_test/base_PC_0.jpg
+          curl -o work/base_PC_1.jpg https://namanonamako.github.io/poster_test/base_PC_1.jpg
+          curl -o work/base_PC_2.jpg https://namanonamako.github.io/poster_test/base_PC_2.jpg
+          curl -o work/base_PC_3.jpg https://namanonamako.github.io/poster_test/base_PC_3.jpg
+          curl -o work/base_PC_4.jpg https://namanonamako.github.io/poster_test/base_PC_4.jpg
+          curl -o work/base_PC_5.jpg https://namanonamako.github.io/poster_test/base_PC_5.jpg
+          curl -o work/base_PC_6.jpg https://namanonamako.github.io/poster_test/base_PC_6.jpg
+          curl -o work/base_PC_7.jpg https://namanonamako.github.io/poster_test/base_PC_7.jpg
+          curl -o work/base_PC_8.jpg https://namanonamako.github.io/poster_test/base_PC_8.jpg
+          curl -o work/base_PC_9.jpg https://namanonamako.github.io/poster_test/base_PC_9.jpg
+          curl -o work/base_PC_10.jpg https://namanonamako.github.io/poster_test/base_PC_10.jpg
+          curl -o work/base_PC_11.jpg https://namanonamako.github.io/poster_test/base_PC_11.jpg
+          curl -o work/base_Quest_0.jpg https://namanonamako.github.io/poster_test/base_Quest_0.jpg
+          curl -o work/base_Quest_1.jpg https://namanonamako.github.io/poster_test/base_Quest_1.jpg
+          curl -o work/base_Quest_2.jpg https://namanonamako.github.io/poster_test/base_Quest_2.jpg
+          curl -o work/base_Quest_3.jpg https://namanonamako.github.io/poster_test/base_Quest_3.jpg
+          curl -o work/base_Quest_4.jpg https://namanonamako.github.io/poster_test/base_Quest_4.jpg
+          curl -o work/base_Quest_5.jpg https://namanonamako.github.io/poster_test/base_Quest_5.jpg
+          curl -o work/base_Quest_6.jpg https://namanonamako.github.io/poster_test/base_Quest_6.jpg
+          curl -o work/base_Quest_7.jpg https://namanonamako.github.io/poster_test/base_Quest_7.jpg
+          curl -o work/base_Quest_8.jpg https://namanonamako.github.io/poster_test/base_Quest_8.jpg
+          curl -o work/base_Quest_9.jpg https://namanonamako.github.io/poster_test/base_Quest_9.jpg
+          curl -o work/base_Quest_10.jpg https://namanonamako.github.io/poster_test/base_Quest_10.jpg
+          curl -o work/base_Quest_11.jpg https://namanonamako.github.io/poster_test/base_Quest_11.jpg
+          curl -o work/posterInfo.json https://namanonamako.github.io/poster_test/posterInfo.json
+          curl -o work/posterData.json http://keisotsuna.servebeer.com:9000/posterData.json
+      - name: Set UTF-8 locale
+        run: sudo apt-get install -y language-pack-ja && sudo update-locale LANG=ja_JP.UTF-8
+      - name: Install Japanese fonts
+        run: sudo apt-get install -y fonts-noto-cjk
       - name: start action...
         run: >
           node app.js

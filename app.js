@@ -34,11 +34,10 @@ async function load_image_and_draw(context, imagePath, rowIndex, colIndex) {
 
 /**
  * 保存した画像をタイル状に並べてmerge画像を作る
- * @param {string} sourceDirectoryPath 元となる画像の保存先ディレクトリpath
- * @param {string} exporetfilePath 完成した画像の保存先
+ * @param {string} platform_name 対象となるPlatform
  * @param {number} imageID 保存先ディレクトリにおける何枚目のmerge画像か
  */
-async function create_merged_picture(sourceDirectoryPath, exporetfilePath, imageID) {
+async function create_merged_picture(platform_name, imageID) {
     const { createCanvas } = require('@napi-rs/canvas');
     // タイルの行数と列数
     const rows = 2;
@@ -52,7 +51,7 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
     context.fillStyle = 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < rows * cols; i++) {
-        const filePath = path.join(sourceDirectoryPath, `${i + imageID * (rows * cols)}.jpg`);
+        const filePath = path.join("images", `base_${platform_name}_${i + imageID * (rows * cols)}.jpg`);
         if (fs.existsSync(filePath)) {
             await load_image_and_draw(context, filePath, i % (rows + 1), Math.floor(i / cols));
         } else {
@@ -60,27 +59,8 @@ async function create_merged_picture(sourceDirectoryPath, exporetfilePath, image
         }
     }
     const pngData = await canvas.encode('png');
-    await fs.promises.writeFile(exporetfilePath, pngData);
-
-    // キャンバスの破棄
-    context = null;
-    canvas = null;
-    console.log("FinishJob");
+    await fs.promises.writeFile(`images/${platform_name}_${imageID}.jpg`, pngData);
 }
-
-const pc_work_dir_path = "work/PCWorldPic/";
-const quest_work_dir_path = "work/QuestWorldPic/";
-const final_dir_path = "images/";
-
-async function main() {
-    await create_merged_picture(pc_work_dir_path, path.join(final_dir_path, "PC_0.jpg"), 0);
-    await create_merged_picture(pc_work_dir_path, path.join(final_dir_path, "PC_1.jpg"), 1);
-    await create_merged_picture(quest_work_dir_path, path.join(final_dir_path, "Quest_0.jpg"), 0);
-    await create_merged_picture(quest_work_dir_path, path.join(final_dir_path, "Quest_1.jpg"), 1);
-
-    test();
-}
-// #regiton test
 
 /**
  * URLからTweet画像を生成する
@@ -101,35 +81,131 @@ async function screenshot_tweet_pic(tweetUrl, path) {
             page.on('console', msg => console.log(msg.text()));
             // Twitterの埋め込みリンクを開く
             await page.setContent(response.data.html, { waitUntil: 'domcontentloaded' });
-            console.log(`リンクを開きました。`);
             const iframeHandle = await page.waitForSelector('#twitter-widget-0');
-            console.log(`フレームの準備ができました。`);
             const frame = await iframeHandle.contentFrame();
-            console.log(`フレームを取得しました。`);
             await frame.waitForNavigation({ waitUntil: 'networkidle0' });
-            //await page.waitForTimeout(10000);
             console.log(`フレームの描画が完了しました。`);
 
             await page.setViewport({ width: Math.ceil(550), height: Math.ceil(800) });
-            console.log(`キャプチャ範囲をコンテンツサイズに合わせました`);
             await page.screenshot({ path: path });
             console.log(`キャプチャしました`);
         } catch (e) {
             console.log("キャプチャに失敗しました。");
-            // throw e;
+            throw e;
         } finally {
             await browser.close();
         }
     });
 }
-async function test() {
-    for (var i = 0; i < 12; i++) {
-        await screenshot_tweet_pic("https://twitter.com/medic35351/status/1738140908447731881", path.join(final_dir_path, `testPC_${i}.jpg`));
+
+const MAX_TWEETPIC_NUM = 12;
+
+/**
+ * 自サーバーからDLしたデータを使って各ツイートのキャプチャ画像を作る
+ * @param {any} platform_name
+ * @param {any} datas
+ */
+async function create_basepic(platform_name, datas) {
+    var pic_count = 0;
+    const world_id_array = [];
+    console.log(datas);
+    for (let i = 0; i < datas.length; i++) {
+        try {
+            if (pic_count >= MAX_TWEETPIC_NUM) return true;
+            const filePath = path.join("images/", `base_${platform_name}_${i}.jpg`);
+            console.log(`${pic_count + 1}枚目の処理を開始します`);
+            await screenshot_tweet_pic(datas[i].url, filePath);
+            console.log(`${pic_count + 1}枚目の出力が完了しました`);
+            // ワールドIDを保存
+            world_id_array.push(datas[i].world_id);
+            pic_count += 1;
+        } catch (e) {
+            console.log(e.message);
+            console.log(`${pic_count + 1}枚目の処理に失敗しました。`);
+        }
+    };
+    console.log(world_id_array);
+    const key = `${platform_name}WorldID`;
+    json_data[key] = world_id_array;
+    // 前回更新分から足りない画像を移動
+    const results = [];
+    let moved_count = 0;
+    for (let i = pic_count; i < MAX_TWEETPIC_NUM; i++) {
+        try {
+            const old_filePath = path.join("work/", `base_${platform_name}_${moved_count}.jpg`);
+            const filePath = path.join("images/", `base_${platform_name}_${i}.jpg`);
+            console.log(`${i + 1}枚目の移動を開始します`);
+            results.push(new Promise(async (resolve, reject) => {
+                if (await fs.existsSync(old_filePath)) {
+                    try {
+                        await fs.copyFileSync(old_filePath, filePath);
+                        console.log(`${i + 1}枚目の移動が完了しました`);
+                        resolve();
+                    } catch (err) {
+                        console.log(err);
+                        reject();
+                    }
+                }
+                resolve();
+            }));
+            moved_count += 1;
+        } catch (e) {
+            console.log(e.message);
+            console.log(`${i + 1}枚目の移動に失敗しました。`);
+        }
     }
-    for (var i = 0; i < 12; i++) {
-        await screenshot_tweet_pic("https://x.com/maybecat101/status/1737773081392033907", path.join(final_dir_path, `testQuest_${i}.jpg`));
-    }    
+    await Promise.all(results);
 }
+
+var json_data = {};
+
+/** ポスターから参照する情報を保持したJsonの作成 */
+
+async function create_poster_info_json() {
+    const old_json_file_path = "work/posterInfo.json";
+    const json_file_path = "images/posterInfo.json";
+
+
+    var pc_world_ids_fixed = json_data["PCWorldID"];
+    var quest_world_ids_fixed = json_data["QuestWorldID"];
+
+    // 前回処理分の読み込み
+    if (fs.existsSync(json_file_path)) {
+        const content = await fs.readFileSync(old_json_file_path, (err) => err && console.error(err));
+        const infos = JSON.parse(content);
+        pc_world_ids_fixed = pc_world_ids_fixed.concat(infos.PCWorldID).slice(0, MAX_TWEETPIC_NUM);
+        quest_world_ids_fixed = quest_world_ids_fixed.concat(infos.QuestWorldID).slice(0, MAX_TWEETPIC_NUM);
+    }
+
+    // 要素数を調整
+    json_data["PCWorldID"] = Array.from({ length: MAX_TWEETPIC_NUM }, (value, index) => pc_world_ids_fixed[index] || "");
+    json_data["QuestWorldID"] = Array.from({ length: MAX_TWEETPIC_NUM }, (value, index) => quest_world_ids_fixed[index] || "");
+
+    json_data["ver"] = "v1.0";
+    json_data["message"] = "Tweetを30分毎に取得します\n<color=blue>#VRChat_world紹介</color>\n<color=green>#VRChat_quest_world</color>";
+    const payload = JSON.stringify(json_data);
+    await fs.writeFile(json_file_path, payload, (err) => err && console.error(err));
+}
+
+async function main() {
+    const sorce_json_file_path = "work/posterData.json";
+
+    if (fs.existsSync(sorce_json_file_path)) {
+        const content = await fs.readFileSync(sorce_json_file_path, (err) => err && console.error(err));
+        const posterData = JSON.parse(content);
+        await create_basepic("PC", posterData.PCWorld);
+        await create_basepic("Quest", posterData.QuestWorld);
+    }
+
+    await create_merged_picture("PC", 0);
+    await create_merged_picture("PC", 1);
+    await create_merged_picture("Quest", 0);
+    await create_merged_picture("Quest", 1);
+    create_poster_info_json();
+}
+// #regiton test
+
+
 
 // #endregion
 
