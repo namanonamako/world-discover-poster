@@ -170,7 +170,7 @@ async function create_poster_info_json() {
     var quest_world_ids_fixed = json_data["QuestWorldID"];
 
     // 前回処理分の読み込み
-    if (fs.existsSync(json_file_path)) {
+    if (fs.existsSync(old_json_file_path)) {
         const content = await fs.readFileSync(old_json_file_path, (err) => err && console.error(err));
         const infos = JSON.parse(content);
         pc_world_ids_fixed = pc_world_ids_fixed.concat(infos.PCWorldID).slice(0, MAX_TWEETPIC_NUM);
