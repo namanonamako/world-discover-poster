@@ -84,6 +84,20 @@ async function screenshot_tweet_pic(tweetUrl, path) {
             const iframeHandle = await page.waitForSelector('#twitter-widget-0');
             const frame = await iframeHandle.contentFrame();
             await frame.waitForNavigation({ waitUntil: 'networkidle0' });
+            // センシティブボタンが存在するか確認
+            const buttonSelector = 'div[role="button"].css-18t94o4';
+            const buttonExists = await frame.$(buttonSelector);
+            if (buttonExists) {
+                // 要素が存在する場合はテキストを取得して"View"が含まれているか確認
+                const buttonText = await frame.$eval(buttonSelector, el => el.innerText);
+
+                if (buttonText.includes('View')) {
+                    // "View"が含まれている場合はクリック
+                    frame.click(buttonSelector);
+                    console.log('Viewボタンがクリックされました。');
+                }
+            }
+            await page.waitForTimeout(3000);
             console.log(`フレームの描画が完了しました。`);
 
             await page.setViewport({ width: Math.ceil(550), height: Math.ceil(800) });
