@@ -112,7 +112,7 @@ async function screenshot_tweet_pic(tweetUrl, path) {
     });
 }
 
-const MAX_TWEETPIC_NUM = 12;
+const MAX_TWEETPIC_NUM = 36;
 
 /**
  * 自サーバーからDLしたデータを使って各ツイートのキャプチャ画像を作る
@@ -213,8 +213,16 @@ async function main() {
 
     await create_merged_picture("PC", 0);
     await create_merged_picture("PC", 1);
+    await create_merged_picture("PC", 2);
+    await create_merged_picture("PC", 3);
+    await create_merged_picture("PC", 4);
+    await create_merged_picture("PC", 5);
     await create_merged_picture("Quest", 0);
     await create_merged_picture("Quest", 1);
+    await create_merged_picture("Quest", 2);
+    await create_merged_picture("Quest", 3);
+    await create_merged_picture("Quest", 4);
+    await create_merged_picture("Quest", 5);
     create_poster_info_json();
 }
 // #regiton test
