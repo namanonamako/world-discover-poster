@@ -46,6 +46,30 @@ jobs:
           curl -o work/base_PC_9.jpg https://namanonamako.github.io/world-discover-poster/base_PC_9.jpg
           curl -o work/base_PC_10.jpg https://namanonamako.github.io/world-discover-poster/base_PC_10.jpg
           curl -o work/base_PC_11.jpg https://namanonamako.github.io/world-discover-poster/base_PC_11.jpg
+          curl -o work/base_PC_12.jpg https://namanonamako.github.io/world-discover-poster/base_PC_12.jpg
+          curl -o work/base_PC_13.jpg https://namanonamako.github.io/world-discover-poster/base_PC_13.jpg
+          curl -o work/base_PC_14.jpg https://namanonamako.github.io/world-discover-poster/base_PC_14.jpg
+          curl -o work/base_PC_15.jpg https://namanonamako.github.io/world-discover-poster/base_PC_15.jpg
+          curl -o work/base_PC_16.jpg https://namanonamako.github.io/world-discover-poster/base_PC_16.jpg
+          curl -o work/base_PC_17.jpg https://namanonamako.github.io/world-discover-poster/base_PC_17.jpg
+          curl -o work/base_PC_18.jpg https://namanonamako.github.io/world-discover-poster/base_PC_18.jpg
+          curl -o work/base_PC_19.jpg https://namanonamako.github.io/world-discover-poster/base_PC_19.jpg
+          curl -o work/base_PC_20.jpg https://namanonamako.github.io/world-discover-poster/base_PC_20.jpg
+          curl -o work/base_PC_21.jpg https://namanonamako.github.io/world-discover-poster/base_PC_21.jpg
+          curl -o work/base_PC_22.jpg https://namanonamako.github.io/world-discover-poster/base_PC_22.jpg
+          curl -o work/base_PC_23.jpg https://namanonamako.github.io/world-discover-poster/base_PC_23.jpg
+          curl -o work/base_PC_24.jpg https://namanonamako.github.io/world-discover-poster/base_PC_24.jpg
+          curl -o work/base_PC_25.jpg https://namanonamako.github.io/world-discover-poster/base_PC_25.jpg
+          curl -o work/base_PC_26.jpg https://namanonamako.github.io/world-discover-poster/base_PC_26.jpg
+          curl -o work/base_PC_27.jpg https://namanonamako.github.io/world-discover-poster/base_PC_27.jpg
+          curl -o work/base_PC_28.jpg https://namanonamako.github.io/world-discover-poster/base_PC_28.jpg
+          curl -o work/base_PC_29.jpg https://namanonamako.github.io/world-discover-poster/base_PC_29.jpg
+          curl -o work/base_PC_30.jpg https://namanonamako.github.io/world-discover-poster/base_PC_30.jpg
+          curl -o work/base_PC_31.jpg https://namanonamako.github.io/world-discover-poster/base_PC_31.jpg
+          curl -o work/base_PC_32.jpg https://namanonamako.github.io/world-discover-poster/base_PC_32.jpg
+          curl -o work/base_PC_33.jpg https://namanonamako.github.io/world-discover-poster/base_PC_33.jpg
+          curl -o work/base_PC_34.jpg https://namanonamako.github.io/world-discover-poster/base_PC_34.jpg
+          curl -o work/base_PC_35.jpg https://namanonamako.github.io/world-discover-poster/base_PC_35.jpg
           curl -o work/base_Quest_0.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_0.jpg
           curl -o work/base_Quest_1.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_1.jpg
           curl -o work/base_Quest_2.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_2.jpg
@@ -58,6 +82,30 @@ jobs:
           curl -o work/base_Quest_9.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_9.jpg
           curl -o work/base_Quest_10.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_10.jpg
           curl -o work/base_Quest_11.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_11.jpg
+          curl -o work/base_Quest_12.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_12.jpg
+          curl -o work/base_Quest_13.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_13.jpg
+          curl -o work/base_Quest_14.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_14.jpg
+          curl -o work/base_Quest_15.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_15.jpg
+          curl -o work/base_Quest_16.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_16.jpg
+          curl -o work/base_Quest_17.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_17.jpg
+          curl -o work/base_Quest_18.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_18.jpg
+          curl -o work/base_Quest_19.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_19.jpg
+          curl -o work/base_Quest_20.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_20.jpg
+          curl -o work/base_Quest_21.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_21.jpg
+          curl -o work/base_Quest_22.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_22.jpg
+          curl -o work/base_Quest_23.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_23.jpg
+          curl -o work/base_Quest_24.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_24.jpg
+          curl -o work/base_Quest_25.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_25.jpg
+          curl -o work/base_Quest_26.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_26.jpg
+          curl -o work/base_Quest_27.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_27.jpg
+          curl -o work/base_Quest_28.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_28.jpg
+          curl -o work/base_Quest_29.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_29.jpg
+          curl -o work/base_Quest_30.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_30.jpg
+          curl -o work/base_Quest_31.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_31.jpg
+          curl -o work/base_Quest_32.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_32.jpg
+          curl -o work/base_Quest_33.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_33.jpg
+          curl -o work/base_Quest_34.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_34.jpg
+          curl -o work/base_Quest_35.jpg https://namanonamako.github.io/world-discover-poster/base_Quest_35.jpg
           curl -o work/posterInfo.json https://namanonamako.github.io/world-discover-poster/posterInfo.json
           curl -o work/posterData.json http://keisotsuna.servebeer.com:9000/posterData.json
       - name: Set UTF-8 locale
