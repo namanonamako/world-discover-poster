@@ -126,7 +126,7 @@ async function create_basepic(platform_name, datas) {
     for (let i = 0; i < datas.length; i++) {
         try {
             if (pic_count >= MAX_TWEETPIC_NUM) return true;
-            const filePath = path.join("images/", `base_${platform_name}_${i}.jpg`);
+            const filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
             console.log(`${pic_count + 1}枚目の処理を開始します`);
             await screenshot_tweet_pic(datas[i].url, filePath);
             console.log(`${pic_count + 1}枚目の出力が完了しました`);
