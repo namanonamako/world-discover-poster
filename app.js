@@ -1,6 +1,9 @@
 const fs = require("fs");//ファイルコントロールシステム
 const path = require('path');
 
+// ブラックリスト
+const blackList = ["ryo777cluster"]
+
 // タイルのサイズ
 const tileWidth = 550;
 const tileHeight = 800;
@@ -64,7 +67,6 @@ async function create_merged_picture(platform_name, imageID) {
 
 /**
  * URLからTweet画像を生成する
- * @param {Browser} browser 生成に使うpuppeteerのブラウザ
  * @param {string} tweetUrl 生成元のURL
  * @param {string} path 生成した画像の保存先パス
  */
@@ -126,13 +128,19 @@ async function create_basepic(platform_name, datas) {
     for (let i = 0; i < datas.length; i++) {
         try {
             if (pic_count >= MAX_TWEETPIC_NUM) return true;
-            const filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
-            console.log(`${pic_count + 1}枚目の処理を開始します`);
-            await screenshot_tweet_pic(datas[i].url, filePath);
-            console.log(`${pic_count + 1}枚目の出力が完了しました`);
-            // ワールドIDを保存
-            world_id_array.push(datas[i].world_id);
-            pic_count += 1;
+            
+            const containsBlacklistWord = blackList.some(blackListID => datas[i].url.includes(blackListID));
+            if (containsBlacklistWord) {
+                console.log(`BlackList対象です:${datas[i].url}`);
+            } else {
+                const filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
+                console.log(`${pic_count + 1}枚目の処理を開始します`);
+                await screenshot_tweet_pic(datas[i].url, filePath);
+                console.log(`${pic_count + 1}枚目の出力が完了しました`);
+                // ワールドIDを保存
+                world_id_array.push(datas[i].world_id);
+                pic_count += 1;
+            }
         } catch (e) {
             console.log(e.message);
             console.log(`${pic_count + 1}枚目の処理に失敗しました。`);
