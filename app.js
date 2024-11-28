@@ -215,30 +215,8 @@ async function main() {
     if (fs.existsSync(sorce_json_file_path)) {
         const content = await fs.readFileSync(sorce_json_file_path, (err) => err && console.error(err));
         const posterData = JSON.parse(content);
-        //await create_basepic("PC", posterData.PCWorld);
-        await create_basepic("PC", [
-            {
-                url: 'https://x.com/touasa/status/1862071563736297858',
-                world_id: ''
-            },
-            {
-                url: 'https://twitter.com/tenyukino_2/status/1862058865367417067',
-                world_id: 'wrld_1ce73535-9d63-4c47-be53-d216afe0882e'
-            },
-            {
-                url: 'https://twitter.com/MackonQuest/status/1862058863123427533',
-                world_id: 'wrld_a1422265-430c-4027-b256-eb350b0083d9'
-            },
-            {
-                url: 'https://twitter.com/NeophotoXN3D/status/1862058857410761044',
-                world_id: 'wrld_c70a3ead-8954-4e83-a7e6-7a3aefd18e02'
-            },
-            {
-                url: 'https://twitter.com/unagi99vrc/status/1862058851584901137',
-                world_id: 'wrld_5045b166-7576-4b25-b66f-0f6ab5ea5fd4'
-            }
-        ]);
-        //await create_basepic("Quest", posterData.QuestWorld);
+        await create_basepic("PC", posterData.PCWorld);
+        await create_basepic("Quest", posterData.QuestWorld);
     }
 
     await create_merged_picture("PC", 0);
