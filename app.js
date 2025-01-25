@@ -2,7 +2,7 @@ const fs = require("fs");//ファイルコントロールシステム
 const path = require('path');
 
 // ブラックリスト
-const blackList = ["ryo777cluster","vrcfoxabc","_NEO236_","j41jjGFfVX45373","Bocchi_ch1111","rabyru16843"]
+const blackList = ["ryo777cluster","vrcfoxabc","_NEO236_","j41jjGFfVX45373","Bocchi_ch1111","rabyru16843","okasan0725"]
 
 // タイルのサイズ
 const tileWidth = 550;
