@@ -31,7 +31,7 @@ jobs:
           key: npm-${{ hashFiles('package-lock.json') }}
           restore-keys: npm-
       - name: Install npm Package
-        run: npm install
+        run: npm ci
       - name: copyfiles
         run: |
           curl -o work/base_PC_0.jpg https://namanonamako.github.io/world-discover-poster/base_PC_0.jpg
