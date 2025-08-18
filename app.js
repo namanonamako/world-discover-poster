@@ -228,6 +228,7 @@ async function main() {
 
     if (fs.existsSync(sorce_json_file_path)) {
         const content = await fs.readFileSync(sorce_json_file_path, (err) => err && console.error(err));
+        console.log(content);
         const posterData = JSON.parse(content);
         await create_basepic("PC", posterData.PCWorld);
         await create_basepic("Quest", posterData.QuestWorld);
