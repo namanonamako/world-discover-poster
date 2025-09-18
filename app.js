@@ -80,6 +80,7 @@ async function screenshot_tweet_pic(tweetUrl, path, isDarkMode) {
         try {
             browser = await puppeteer.launch({ headless: 'new', args: ['--disable-gpu', '--incognito', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox'] });
             const page = await browser.newPage();
+            await page.emulateTimezone('Asia/Tokyo');
             await page.setViewport({ width: Math.ceil(550), height: Math.ceil(800) });
             // デバッグ用に console.log を nodejs 側に渡す
             page.on('console', msg => console.log(msg.text()));
