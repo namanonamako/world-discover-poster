@@ -2,7 +2,7 @@ const fs = require("fs");//ファイルコントロールシステム
 const path = require('path');
 
 // ブラックリスト
-const blackList = ["vrc14kawa","ryo777cluster","vrcfoxabc","_NEO236_","j41jjGFfVX45373","Bocchi_ch1111","rabyru16843","okasan0725"]
+const blackList = ["vrc14kawa","ryo777cluster","vrcfoxabc","_NEO236_","j41jjGFfVX45373","Bocchi_ch1111","rabyru16843","okasan0725","Cocochan184_VRC"]
 
 // タイルのサイズ
 const tileWidth = 550;
@@ -252,3 +252,4 @@ async function main() {
 // #endregion
 
 main();
+
