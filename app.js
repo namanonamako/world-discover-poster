@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
 const { loadImage, createCanvas } = require('@napi-rs/canvas');
 
 // ブラックリスト
-const blackList = ["vrc14kawa","ryo777cluster","vrcfoxabc","_NEO236_","j41jjGFfVX45373","Bocchi_ch1111","rabyru16843","VRChatWorldBot","okasan0725","Cocochan184_VRC"]
+const blackList = ["vrc14kawa", "ryo777cluster", "vrcfoxabc", "_NEO236_", "j41jjGFfVX45373", "Bocchi_ch1111", "rabyru16843", "VRChatWorldBot", "okasan0725", "Cocochan184_VRC"]
 
 // タイルのサイズ
 const tileWidth = 550;
@@ -56,7 +56,7 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
     context.fillStyle = isDarkMode ? 'black' : 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < rows * cols; i++) {
-        const filePath = path.join("images", `base_${platform_name}${isDarkMode? "_d":""}_${i + imageID * (rows * cols)}.jpg`);
+        const filePath = path.join("images", `base_${platform_name}${isDarkMode ? "_d" : ""}_${i + imageID * (rows * cols)}.jpg`);
         if (fs.existsSync(filePath)) {
             await load_image_and_draw(context, filePath, i % (rows + 1), Math.floor(i / cols));
         } else {
@@ -73,7 +73,7 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
  * @param {string} path 生成した画像の保存先パス
  */
 async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
-    await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false&theme=${isDarkMode ? "dark":"light"}`).then(async response => {
+    await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false&theme=${isDarkMode ? "dark" : "light"}`).then(async response => {
         try {
             const page = await browser.newPage();
             await page.emulateTimezone('Asia/Tokyo');
@@ -126,11 +126,19 @@ async function create_basepic(platform_name, datas) {
     console.log(datas);
     let browser;
     try {
-        browser = await puppeteer.launch({ headless: 'new', args: ['--disable-gpu', '--incognito', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox'] });
+        const puppeteerOptions = {
+            headless: 'new',
+            args: ['--disable-gpu', '--incognito', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox']
+        };
+        // GitHub Actions環境等のLinux向けにシステムChromeを指定（存在する場合）
+        if (process.env.CI || fs.existsSync('/usr/bin/google-chrome')) {
+            puppeteerOptions.executablePath = '/usr/bin/google-chrome';
+        }
+        browser = await puppeteer.launch(puppeteerOptions);
         for (let i = 0; i < datas.length; i++) {
             try {
                 if (pic_count >= MAX_TWEETPIC_NUM) break;
-                
+
                 const containsBlacklistWord = blackList.some(blackListID => datas[i].url.includes(blackListID));
                 if (containsBlacklistWord) {
                     console.log(`BlackList対象です:${datas[i].url}`);
@@ -245,10 +253,10 @@ async function main() {
         await create_basepic("Quest", posterData.QuestWorld);
     }
 
-    for(let i = 0; i < 6; i++) {
-        await create_merged_picture("PC",true, i);
+    for (let i = 0; i < 6; i++) {
+        await create_merged_picture("PC", true, i);
         await create_merged_picture("Quest", true, i);
-        await create_merged_picture("PC",false, i);
+        await create_merged_picture("PC", false, i);
         await create_merged_picture("Quest", false, i);
 
     }
