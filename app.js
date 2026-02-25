@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
 const { loadImage, createCanvas } = require('@napi-rs/canvas');
 
 // ブラックリスト
-const blackList = ["vrc14kawa", "ryo777cluster", "vrcfoxabc", "_NEO236_", "j41jjGFfVX45373", "Bocchi_ch1111", "rabyru16843", "VRChatWorldBot", "okasan0725", "Cocochan184_VRC"]
+const blackList = ["planetvrchat","vrc14kawa", "ryo777cluster", "vrcfoxabc", "_NEO236_", "j41jjGFfVX45373", "Bocchi_ch1111", "rabyru16843", "VRChatWorldBot", "okasan0725", "Cocochan184_VRC"]
 
 // タイルのサイズ
 const tileWidth = 550;
@@ -270,5 +270,6 @@ async function main() {
 // #endregion
 
 main();
+
 
 
