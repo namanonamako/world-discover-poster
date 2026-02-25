@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Inspect files before checkout
@@ -39,11 +39,11 @@ jobs:
           curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/posterInfo.json https://namanonamako.github.io/world-discover-poster/posterInfo.json || rm -f work/posterInfo.json
           curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/posterData.json http://keisotsuna.servebeer.com:9000/posterData.json || rm -f work/posterData.json
           find work -type f -empty -delete
-      - name: Install Japanese fonts and locale
+      - name: Install multilingual fonts and locales
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fonts-ipafont-gothic language-pack-ja
-          sudo locale-gen ja_JP.UTF-8
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji language-pack-ja language-pack-zh-hans language-pack-ko
+          sudo locale-gen ja_JP.UTF-8 zh_CN.UTF-8 ko_KR.UTF-8
           sudo update-locale LANG=ja_JP.UTF-8
           echo "LANG=ja_JP.UTF-8" >> $GITHUB_ENV
       - name: start action...
