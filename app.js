@@ -4,8 +4,10 @@ const axios = require("axios");
 const puppeteer = require('puppeteer');
 const { loadImage, createCanvas } = require('@napi-rs/canvas');
 
-// ブラックリスト
-const blackList = ["planetvrchat","vrc14kawa", "ryo777cluster", "vrcfoxabc", "_NEO236_", "j41jjGFfVX45373", "Bocchi_ch1111", "rabyru16843", "VRChatWorldBot", "okasan0725", "Cocochan184_VRC"]
+// ブラックリストを環境変数から取得（カンマ区切りで入力されることを想定）
+const blackListEnv = process.env.BLACKLIST || "";
+const blackList = blackListEnv ? blackListEnv.split(',').map(id => id.trim()).filter(id => id.length > 0) : [];
+console.log(`ロードされたブラックリスト: ${blackList}`);
 
 // タイルのサイズ
 const tileWidth = 550;
