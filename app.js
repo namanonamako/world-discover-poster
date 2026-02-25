@@ -75,6 +75,7 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
  * @param {string} path 生成した画像の保存先パス
  */
 async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
+    let success = false;
     await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false&theme=${isDarkMode ? "dark" : "light"}`).then(async response => {
         try {
             const page = await browser.newPage();
@@ -106,13 +107,14 @@ async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
             await page.screenshot({ path: path });
             console.log(`キャプチャしました`);
             await page.close();
+            success = true;
         } catch (e) {
             console.log("キャプチャに失敗しました。");
-            throw e;
         }
     }).catch(err => {
         console.log(`ツイート情報取得エラー: ${err.message}`);
     });
+    return success;
 }
 
 const MAX_TWEETPIC_NUM = 36;
@@ -145,20 +147,37 @@ async function create_basepic(platform_name, datas) {
                 if (containsBlacklistWord) {
                     console.log(`BlackList対象です:${datas[i].url}`);
                 } else {
-                    console.log(`${pic_count + 1}枚目の処理を開始します`);
-                    var filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
-                    await screenshot_tweet_pic(browser, datas[i].url, filePath, false);
-                    console.log(`${pic_count + 1}枚目ダークモードの処理を開始します`);
-                    filePath = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
-                    await screenshot_tweet_pic(browser, datas[i].url, filePath, true);
-                    console.log(`${pic_count + 1}枚目の出力が完了しました`);
-                    // ワールドIDを保存
-                    world_id_array.push(datas[i].world_id);
-                    pic_count += 1;
+                    let success = false;
+                    for (let retry = 0; retry < 3; retry++) {
+                        console.log(`${pic_count + 1}枚目の処理を開始します (Try ${retry + 1})`);
+                        var filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
+                        const res1 = await screenshot_tweet_pic(browser, datas[i].url, filePath, false);
+
+                        console.log(`${pic_count + 1}枚目ダークモードの処理を開始します (Try ${retry + 1})`);
+                        var filePath_d = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
+                        const res2 = await screenshot_tweet_pic(browser, datas[i].url, filePath_d, true);
+
+                        if (res1 && res2) {
+                            success = true;
+                            break;
+                        } else {
+                            console.log(`キャプチャに失敗したため、3秒待機してリトライします...`);
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                        }
+                    }
+
+                    if (success) {
+                        console.log(`${pic_count + 1}枚目の出力が完了しました`);
+                        // ワールドIDを保存
+                        world_id_array.push(datas[i].world_id);
+                        pic_count += 1;
+                    } else {
+                        console.log(`${datas[i].url} のキャプチャに完全に失敗したためスキップし、次のツイートを処理します。`);
+                    }
                 }
             } catch (e) {
                 console.log(e.message);
-                console.log(`${pic_count + 1}枚目の処理に失敗しました。`);
+                console.log(`${pic_count + 1}枚目の処理中に予期せぬエラーが発生しました。`);
             }
         };
     } finally {
