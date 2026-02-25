@@ -1,5 +1,8 @@
 const fs = require("fs");//ファイルコントロールシステム
 const path = require('path');
+const axios = require("axios");
+const puppeteer = require('puppeteer');
+const { loadImage, createCanvas } = require('@napi-rs/canvas');
 
 // ブラックリスト
 const blackList = ["vrc14kawa","ryo777cluster","vrcfoxabc","_NEO236_","j41jjGFfVX45373","Bocchi_ch1111","rabyru16843","VRChatWorldBot","okasan0725","Cocochan184_VRC"]
@@ -15,7 +18,6 @@ const tileHeight = 800;
  * @param {number} colIndex 配置場所
  */
 async function load_image_and_draw(context, imagePath, rowIndex, colIndex) {
-    const { loadImage } = require('@napi-rs/canvas');
     try {
         var image = await loadImage(imagePath);
         // 配置する画像の幅と高さ
@@ -42,7 +44,6 @@ async function load_image_and_draw(context, imagePath, rowIndex, colIndex) {
  * @param {number} imageID 保存先ディレクトリにおける何枚目のmerge画像か
  */
 async function create_merged_picture(platform_name, isDarkMode, imageID) {
-    const { createCanvas } = require('@napi-rs/canvas');
     // タイルの行数と列数
     const rows = 2;
     const cols = 3;
@@ -71,14 +72,9 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
  * @param {string} tweetUrl 生成元のURL
  * @param {string} path 生成した画像の保存先パス
  */
-async function screenshot_tweet_pic(tweetUrl, path, isDarkMode) {
-    const axios = require("axios");
-    const puppeteer = require('puppeteer');
-
+async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
     await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false&theme=${isDarkMode ? "dark":"light"}`).then(async response => {
-        let browser;
         try {
-            browser = await puppeteer.launch({ headless: 'new', args: ['--disable-gpu', '--incognito', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox'] });
             const page = await browser.newPage();
             await page.emulateTimezone('Asia/Tokyo');
             await page.setViewport({ width: Math.ceil(550), height: Math.ceil(800) });
@@ -98,21 +94,22 @@ async function screenshot_tweet_pic(tweetUrl, path, isDarkMode) {
 
                 if (buttonText.includes('View')) {
                     // "View"が含まれている場合はクリック
-                    frame.click(buttonSelector);
+                    await frame.click(buttonSelector);
                     console.log('Viewボタンがクリックされました。');
                 }
             }
-            await page.waitForTimeout(3000);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             console.log(`フレームの描画が完了しました。`);
 
             await page.screenshot({ path: path });
             console.log(`キャプチャしました`);
+            await page.close();
         } catch (e) {
             console.log("キャプチャに失敗しました。");
             throw e;
-        } finally {
-            await browser.close();
         }
+    }).catch(err => {
+        console.log(`ツイート情報取得エラー: ${err.message}`);
     });
 }
 
@@ -127,30 +124,36 @@ async function create_basepic(platform_name, datas) {
     var pic_count = 0;
     const world_id_array = [];
     console.log(datas);
-    for (let i = 0; i < datas.length; i++) {
-        try {
-            if (pic_count >= MAX_TWEETPIC_NUM) return true;
-            
-            const containsBlacklistWord = blackList.some(blackListID => datas[i].url.includes(blackListID));
-            if (containsBlacklistWord) {
-                console.log(`BlackList対象です:${datas[i].url}`);
-            } else {
-                console.log(`${pic_count + 1}枚目の処理を開始します`);
-                var filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
-                await screenshot_tweet_pic(datas[i].url, filePath, false);
-                console.log(`${pic_count + 1}枚目ダークモードの処理を開始します`);
-                filePath = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
-                await screenshot_tweet_pic(datas[i].url, filePath, true);
-                console.log(`${pic_count + 1}枚目の出力が完了しました`);
-                // ワールドIDを保存
-                world_id_array.push(datas[i].world_id);
-                pic_count += 1;
+    let browser;
+    try {
+        browser = await puppeteer.launch({ headless: 'new', args: ['--disable-gpu', '--incognito', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox'] });
+        for (let i = 0; i < datas.length; i++) {
+            try {
+                if (pic_count >= MAX_TWEETPIC_NUM) break;
+                
+                const containsBlacklistWord = blackList.some(blackListID => datas[i].url.includes(blackListID));
+                if (containsBlacklistWord) {
+                    console.log(`BlackList対象です:${datas[i].url}`);
+                } else {
+                    console.log(`${pic_count + 1}枚目の処理を開始します`);
+                    var filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
+                    await screenshot_tweet_pic(browser, datas[i].url, filePath, false);
+                    console.log(`${pic_count + 1}枚目ダークモードの処理を開始します`);
+                    filePath = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
+                    await screenshot_tweet_pic(browser, datas[i].url, filePath, true);
+                    console.log(`${pic_count + 1}枚目の出力が完了しました`);
+                    // ワールドIDを保存
+                    world_id_array.push(datas[i].world_id);
+                    pic_count += 1;
+                }
+            } catch (e) {
+                console.log(e.message);
+                console.log(`${pic_count + 1}枚目の処理に失敗しました。`);
             }
-        } catch (e) {
-            console.log(e.message);
-            console.log(`${pic_count + 1}枚目の処理に失敗しました。`);
-        }
-    };
+        };
+    } finally {
+        if (browser) await browser.close();
+    }
     console.log(world_id_array);
     const key = `${platform_name}WorldID`;
     json_data[key] = world_id_array;
@@ -164,27 +167,26 @@ async function create_basepic(platform_name, datas) {
             const old_filePath_d = path.join("work/", `base_${platform_name}_d_${moved_count}.jpg`);
             const filePath_d = path.join("images/", `base_${platform_name}_d_${i}.jpg`);
             console.log(`${i + 1}枚目の移動を開始します`);
-            results.push(new Promise(async (resolve, reject) => {
-                if (await fs.existsSync(old_filePath)) {
+            results.push((async () => {
+                if (fs.existsSync(old_filePath)) {
                     try {
-                        await fs.copyFileSync(old_filePath, filePath);
+                        await fs.promises.copyFile(old_filePath, filePath);
                         console.log(`${i + 1}枚目の移動が完了しました`);
                     } catch (err) {
                         console.log(err);
-                        reject();
+                        throw err;
                     }
                 }
-                if (await fs.existsSync(old_filePath_d)) {
+                if (fs.existsSync(old_filePath_d)) {
                     try {
-                        await fs.copyFileSync(old_filePath_d, filePath_d);
+                        await fs.promises.copyFile(old_filePath_d, filePath_d);
                         console.log(`${i + 1}枚目ダークモードの移動が完了しました`);
                     } catch (err) {
                         console.log(err);
-                        reject();
+                        throw err;
                     }
                 }
-                resolve();
-            }));
+            })());
             moved_count += 1;
         } catch (e) {
             console.log(e.message);
@@ -208,10 +210,14 @@ async function create_poster_info_json() {
 
     // 前回処理分の読み込み
     if (fs.existsSync(old_json_file_path)) {
-        const content = await fs.readFileSync(old_json_file_path, (err) => err && console.error(err));
-        const infos = JSON.parse(content);
-        pc_world_ids_fixed = pc_world_ids_fixed.concat(infos.PCWorldID).slice(0, MAX_TWEETPIC_NUM);
-        quest_world_ids_fixed = quest_world_ids_fixed.concat(infos.QuestWorldID).slice(0, MAX_TWEETPIC_NUM);
+        try {
+            const content = await fs.promises.readFile(old_json_file_path, "utf-8");
+            const infos = JSON.parse(content);
+            pc_world_ids_fixed = pc_world_ids_fixed.concat(infos.PCWorldID).slice(0, MAX_TWEETPIC_NUM);
+            quest_world_ids_fixed = quest_world_ids_fixed.concat(infos.QuestWorldID).slice(0, MAX_TWEETPIC_NUM);
+        } catch (err) {
+            console.error("Failed to read generic old json_file:", err.message);
+        }
     }
 
     // 要素数を調整
@@ -221,7 +227,11 @@ async function create_poster_info_json() {
     json_data["ver"] = "v1.1";
     json_data["message"] = "Tweetを30分毎に取得します\n<color=blue>#VRChat_world紹介</color>\n<color=green>#VRChat_quest_world</color>";
     const payload = JSON.stringify(json_data);
-    await fs.writeFile(json_file_path, payload, (err) => err && console.error(err));
+    try {
+        await fs.promises.writeFile(json_file_path, payload);
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 async function main() {
