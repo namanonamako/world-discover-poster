@@ -75,7 +75,7 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
  * @param {string} path 生成した画像の保存先パス
  */
 async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
-    let success = false;
+    let result = "error";
     await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false&theme=${isDarkMode ? "dark" : "light"}`).then(async response => {
         try {
             const page = await browser.newPage();
@@ -88,6 +88,20 @@ async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
             const iframeHandle = await page.waitForSelector('#twitter-widget-0');
             const frame = await iframeHandle.contentFrame();
             await frame.waitForNavigation({ waitUntil: 'networkidle0' });
+
+            // 画像が含まれているか確認 (pbs.twimg.com/media/... が含まれる img タグがあるか)
+            const hasMedia = await frame.evaluate(() => {
+                const imgs = Array.from(document.querySelectorAll('img'));
+                return imgs.some(img => img.src.includes('pbs.twimg.com/media/'));
+            });
+
+            if (!hasMedia) {
+                console.log("このツイートには画像が含まれていないため、スキップ対象として判定しました。");
+                await page.close();
+                result = "no_media";
+                return;
+            }
+
             // センシティブボタンが存在するか確認
             const buttonSelector = 'div[role="button"].css-18t94o4';
             const buttonExists = await frame.$(buttonSelector);
@@ -107,14 +121,14 @@ async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
             await page.screenshot({ path: path });
             console.log(`キャプチャしました`);
             await page.close();
-            success = true;
+            result = "success";
         } catch (e) {
             console.log("キャプチャに失敗しました。");
         }
     }).catch(err => {
         console.log(`ツイート情報取得エラー: ${err.message}`);
     });
-    return success;
+    return result;
 }
 
 const MAX_TWEETPIC_NUM = 36;
@@ -147,18 +161,23 @@ async function create_basepic(platform_name, datas) {
                 if (containsBlacklistWord) {
                     console.log(`BlackList対象です:${datas[i].url}`);
                 } else {
-                    let success = false;
+                    let status = "error";
                     for (let retry = 0; retry < 3; retry++) {
                         console.log(`${pic_count + 1}枚目の処理を開始します (Try ${retry + 1})`);
                         var filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
                         const res1 = await screenshot_tweet_pic(browser, datas[i].url, filePath, false);
 
+                        if (res1 === "no_media") {
+                            status = "no_media";
+                            break;
+                        }
+
                         console.log(`${pic_count + 1}枚目ダークモードの処理を開始します (Try ${retry + 1})`);
                         var filePath_d = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
                         const res2 = await screenshot_tweet_pic(browser, datas[i].url, filePath_d, true);
 
-                        if (res1 && res2) {
-                            success = true;
+                        if (res1 === "success" && res2 === "success") {
+                            status = "success";
                             break;
                         } else {
                             console.log(`キャプチャに失敗したため、3秒待機してリトライします...`);
@@ -166,11 +185,13 @@ async function create_basepic(platform_name, datas) {
                         }
                     }
 
-                    if (success) {
+                    if (status === "success") {
                         console.log(`${pic_count + 1}枚目の出力が完了しました`);
                         // ワールドIDを保存
                         world_id_array.push(datas[i].world_id);
                         pic_count += 1;
+                    } else if (status === "no_media") {
+                        console.log(`${datas[i].url} は画像が含まれていないためスキップします。`);
                     } else {
                         console.log(`${datas[i].url} のキャプチャに完全に失敗したためスキップし、次のツイートを処理します。`);
                     }
