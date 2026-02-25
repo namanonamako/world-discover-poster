@@ -57,10 +57,10 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < rows * cols; i++) {
         const filePath = path.join("images", `base_${platform_name}${isDarkMode ? "_d" : ""}_${i + imageID * (rows * cols)}.jpg`);
-        if (fs.existsSync(filePath)) {
+        if (fs.existsSync(filePath) && fs.statSync(filePath).size > 0) {
             await load_image_and_draw(context, filePath, i % (rows + 1), Math.floor(i / cols));
         } else {
-            console.log(`${filePath}ファイルが見つからないのでスキップします。`);
+            console.log(`${filePath}が0バイトか存在しないため配置をスキップします。`);
         }
     }
     const pngData = await canvas.encode('png');
@@ -176,7 +176,7 @@ async function create_basepic(platform_name, datas) {
             const filePath_d = path.join("images/", `base_${platform_name}_d_${i}.jpg`);
             console.log(`${i + 1}枚目の移動を開始します`);
             results.push((async () => {
-                if (fs.existsSync(old_filePath)) {
+                if (fs.existsSync(old_filePath) && fs.statSync(old_filePath).size > 0) {
                     try {
                         await fs.promises.copyFile(old_filePath, filePath);
                         console.log(`${i + 1}枚目の移動が完了しました`);
@@ -185,7 +185,7 @@ async function create_basepic(platform_name, datas) {
                         throw err;
                     }
                 }
-                if (fs.existsSync(old_filePath_d)) {
+                if (fs.existsSync(old_filePath_d) && fs.statSync(old_filePath_d).size > 0) {
                     try {
                         await fs.promises.copyFile(old_filePath_d, filePath_d);
                         console.log(`${i + 1}枚目ダークモードの移動が完了しました`);

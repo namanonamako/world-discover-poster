@@ -32,12 +32,13 @@ jobs:
         run: |
           for platform in PC Quest; do
             for i in {0..35}; do
-              curl -s -f -o work/base_${platform}_${i}.jpg "https://namanonamako.github.io/world-discover-poster/base_${platform}_${i}.jpg" || true
-              curl -s -f -o work/base_${platform}_d_${i}.jpg "https://namanonamako.github.io/world-discover-poster/base_${platform}_d_${i}.jpg" || true
+              curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/base_${platform}_${i}.jpg "https://namanonamako.github.io/world-discover-poster/base_${platform}_${i}.jpg" || rm -f work/base_${platform}_${i}.jpg
+              curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/base_${platform}_d_${i}.jpg "https://namanonamako.github.io/world-discover-poster/base_${platform}_d_${i}.jpg" || rm -f work/base_${platform}_d_${i}.jpg
             done
           done
-          curl -s -f -o work/posterInfo.json https://namanonamako.github.io/world-discover-poster/posterInfo.json || true
-          curl -s -f -o work/posterData.json http://keisotsuna.servebeer.com:9000/posterData.json || rm -f work/posterData.json
+          curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/posterInfo.json https://namanonamako.github.io/world-discover-poster/posterInfo.json || rm -f work/posterInfo.json
+          curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/posterData.json http://keisotsuna.servebeer.com:9000/posterData.json || rm -f work/posterData.json
+          find work -type f -empty -delete
       - name: Set UTF-8 locale
         run: sudo apt-get update && sudo apt-get install -y language-pack-ja && sudo update-locale LANG=ja_JP.UTF-8
       - name: Install Japanese fonts
