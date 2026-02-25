@@ -44,6 +44,8 @@ jobs:
       - name: Install Japanese fonts
         run: sudo apt-get install -y fonts-noto-cjk
       - name: start action...
+        env:
+          BLACKLIST: ${{ vars.BLACKLIST }}
         run: >
           node app.js
       - name: check results
