@@ -89,14 +89,31 @@ async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
             const frame = await iframeHandle.contentFrame();
             await frame.waitForNavigation({ waitUntil: 'networkidle0' });
 
-            // 画像が含まれているか確認 (pbs.twimg.com/media/... が含まれる img タグがあるか)
-            const hasMedia = await frame.evaluate(() => {
+            // 画像または VRChat リンクが含まれているか確認
+            const hasMediaOrVrcLink = await frame.evaluate(() => {
+                // 1. 画像のチェック (pbs.twimg.com/media/... が含まれる img タグがあるか)
                 const imgs = Array.from(document.querySelectorAll('img'));
-                return imgs.some(img => img.src.includes('pbs.twimg.com/media/'));
+                const hasImage = imgs.some(img => img.src.includes('pbs.twimg.com/media/'));
+
+                // 2. VRChatリンクのチェック (短縮リンク t.co 対策としてページ全体のテキストとリンク属性をチェック)
+                const textContent = document.documentElement.textContent || '';
+                let hasLink = textContent.includes('vrchat.com');
+
+                if (!hasLink) {
+                    const links = Array.from(document.querySelectorAll('a'));
+                    hasLink = links.some(a => {
+                        const href = a.href || '';
+                        const expanded = a.getAttribute('data-expanded-url') || '';
+                        const text = a.innerText || '';
+                        return href.includes('vrchat.com') || expanded.includes('vrchat.com') || text.includes('vrchat.com');
+                    });
+                }
+
+                return hasImage || hasLink;
             });
 
-            if (!hasMedia) {
-                console.log("このツイートには画像が含まれていないため、スキップ対象として判定しました。");
+            if (!hasMediaOrVrcLink) {
+                console.log("このツイートには画像もVRChatのリンクも含まれていないため、スキップ対象として判定しました。");
                 await page.close();
                 result = "no_media";
                 return;
