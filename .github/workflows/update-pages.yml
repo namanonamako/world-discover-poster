@@ -2,8 +2,14 @@ name: Publish GitHub Pages
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0,30 * * * *'
   repository_dispatch:
     types: [build_and_deploy]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
     
 jobs:
   build:
@@ -29,6 +35,8 @@ jobs:
         run: |
           PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci
       - name: copyfiles
+        env:
+          API_KEY: ${{ secrets.WORLD_INTRODUCTION_API_KEY }}
         run: |
           for platform in PC Quest; do
             for i in {0..35}; do
@@ -37,7 +45,8 @@ jobs:
             done
           done
           curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/posterInfo.json https://namanonamako.github.io/world-discover-poster/posterInfo.json || rm -f work/posterInfo.json
-          curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -o work/posterData.json https://keisotsuna.servebeer.com/api/twitter/posterData.json || rm -f work/posterData.json
+          # v2 API
+          curl --retry-all-errors --retry 3 --retry-delay 2 -s -f -H "X-API-Key: $API_KEY" -o work/posterData.json https://keisotsuna.servebeer.com/api/v2/world-introductions
           find work -type f -empty -delete
       - name: Install multilingual fonts and locales
         run: |
@@ -51,6 +60,12 @@ jobs:
           BLACKLIST: ${{ vars.BLACKLIST }}
         run: >
           node app.js
+      - name: Clean up v2 data
+        if: success()
+        env:
+          API_KEY: ${{ secrets.WORLD_INTRODUCTION_API_KEY }}
+        run: |
+          curl -X DELETE -s -f -H "X-API-Key: $API_KEY" https://keisotsuna.servebeer.com/api/v2/world-introductions
       - name: check results
         run: >
           ls -ltr images
