@@ -1,9 +1,6 @@
 name: Publish GitHub Pages
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '3-59/10 * * * *'
   repository_dispatch:
     types: [build_and_deploy]
 
