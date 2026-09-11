@@ -57,12 +57,6 @@ jobs:
           BLACKLIST: ${{ vars.BLACKLIST }}
         run: >
           node app.js
-      - name: Clean up v2 data
-        if: success()
-        env:
-          API_KEY: ${{ secrets.WORLD_INTRODUCTION_API_KEY }}
-        run: |
-          curl -X DELETE -s -f -H "X-API-Key: $API_KEY" https://discovery-poster-collector-403988156537.us-west1.run.app/world-introductions
       - name: check results
         run: >
           ls -ltr images
@@ -86,3 +80,52 @@ jobs:
     steps:
       - uses: actions/deploy-pages@v4
         id: deployment
+
+  cleanup:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Clean up v2 data
+        env:
+          API_KEY: ${{ secrets.WORLD_INTRODUCTION_API_KEY }}
+        run: |
+          echo "Sending DELETE request to cleanup v2 data..."
+          err_file=$(mktemp)
+          response=$(curl -X DELETE -s -S \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -w "\n%{http_code}" \
+            -H "X-API-Key: $API_KEY" \
+            https://discovery-poster-collector-403988156537.us-west1.run.app/world-introductions \
+            2>"$err_file") || curl_exit=$?
+          curl_err=$(cat "$err_file")
+          rm -f "$err_file"
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          if [ "${curl_exit:-0}" -ne 0 ] || [[ ! "$http_code" =~ ^2[0-9]{2}$ ]]; then
+            echo "::warning title=Clean up v2 data failed::DELETE request failed with HTTP status '${http_code:-N/A}' (curl exit code: ${curl_exit:-0})."
+            {
+              echo "### ⚠️ Clean up v2 data failed"
+              echo "Poster was successfully deployed, but server-side data cleanup returned an error."
+              echo "- **HTTP Status**: \`${http_code:-N/A}\`"
+              echo "- **Curl Exit Code**: \`${curl_exit:-0}\`"
+              if [ -n "$curl_err" ]; then
+                echo "- **Curl Error**:"
+                echo "\`\`\`"
+                echo "$curl_err"
+                echo "\`\`\`"
+              fi
+              echo "- **Response Body**:"
+              echo "\`\`\`"
+              echo "${body:-<empty>}"
+              echo "\`\`\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            echo "Clean up v2 data succeeded with HTTP $http_code."
+          fi
+
+
