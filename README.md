@@ -33,7 +33,7 @@ IFTTT や外部収集サーバーに依存せず、GitHub Actions と GitHub Pag
    - `google-github-actions/get-secretmanager-secrets` で `${GCP_PROJECT_ID}/VRC_PROXY_TOKENS` を取得し、`jq` で JSON 内の `.API_AUTH_TOKEN` を抽出、`::add-mask::` でログマスクした上で `steps.proxy_token.outputs.vrc_proxy_auth_token` に設定します。
    - 認証・取得直後（`always() && steps.gcp_auth.outcome == 'success'`）に、`GOOGLE_GHA_CREDS_PATH`・`GOOGLE_APPLICATION_CREDENTIALS`・`CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE` が指すファイル（および `.credential_source.file`）と `${GITHUB_WORKSPACE}/gha-creds-*.json` を削除し、これらの環境変数を空文字へリセットします。
 3. **X 投稿収集・解析（`node src/collect.js`）**
-   - `work/posterState.json` の `lastTweetId`（未設定時は直近24時間）を基準に Weir API（`POST https://api.weirapp.io/v1/x/search`）で対象投稿を検索します。
+   - `work/posterState.json` の `lastTweetId`（未設定時、または `RESET_LAST_TWEET_ID=true` 指定時は直近24時間）を基準に Weir API（`POST https://api.weirapp.io/v1/x/search`）で対象投稿を検索します（`RESET_LAST_TWEET_ID=true` 時は保存済み `lastTweetId` を無視し、`worldCache` のみ維持します）。
    - `BLACKLIST` 照合およびスパム判定（ハッシュタグ5個以上を除外）を行います。
    - `src/world-id-extractor.js` と `src/url-expander.js` により、直リンクや短縮 URL を安全に展開してワールド ID（`wrld_...`）を抽出します。
    - `src/vrchat-client.js` の `resolveProxyAuthToken()` が `VRC_PROXY_AUTH_TOKEN`（優先）または `VRC_PROXY_TOKENS` JSON 内の `API_AUTH_TOKEN` から認証トークンを解決します。`VRC_PROXY_URL` と認証トークンが両方有効な場合のみ、`vrc-api-proxy` に問い合わせて Quest 対応を自動判定します（判定結果は `worldCache` に7日間キャッシュ）。
@@ -41,6 +41,7 @@ IFTTT や外部収集サーバーに依存せず、GitHub Actions と GitHub Pag
 4. **埋め込み描画・タイル合成（`node app.js`）**
    - GCP 認証用環境変数（`GOOGLE_APPLICATION_CREDENTIALS`、`CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE`、`GOOGLE_GHA_CREDS_PATH`）を明示的に空文字にした状態で実行されます。
    - `work/posterData.json` を読み込み、`src/embed-guard.js` による oEmbed HTML（状態機械ベース）・リクエスト先検証および CSP（`Content-Security-Policy`）`<meta>` 付与を行いつつ、Puppeteer でライトモード／ダークモードのスクリーンショットを撮影します（画像または `vrchat.com` リンクを含まない投稿はスキップ）。
+   - 対象ツイートが1件以上あり、1件も新規キャプチャできずエラーが発生した場合（全面キャプチャ失敗時）は、前回の `lastTweetId` を維持しつつ `worldCache` のみマージした `images/posterState.json` を保存した上でエラー終了し、後続の GitHub Pages デプロイを中断します。
    - 新規撮影分が36枚に満たない枠は `work/` に復元した前回画像で補完し、`@napi-rs/canvas` で 2×3 タイル（各タイル 550×800）に合成して `images/` ディレクトリに出力します（`{PC|Quest}_{0..5}.jpg` / `{PC|Quest}_d_{0..5}.jpg`）。
    - 前回分をマージした `images/posterInfo.json` と、次回実行用の `images/posterState.json` を出力します。
 5. **GitHub Pages デプロイ（`deploy` ジョブ）**
@@ -83,7 +84,7 @@ Quest 自動判定で GCP WIF 連携を利用する場合は、対象プロジ�
 
 - **`.github/workflows/update-pages.yml` (`Publish GitHub Pages`)**
   - `repository_dispatch`（`types: [build_and_deploy]`）: 外部からのディスパッチイベント（`build_and_deploy`）を受けてビルドと GitHub Pages デプロイを実行
-  - `workflow_dispatch`: 手動実行に対応
+  - `workflow_dispatch`: 手動実行に対応（boolean 入力 `reset_last_tweet_id` に `true` を指定すると、保存済みの `lastTweetId` を無視して `worldCache` のみ維持したまま直近24時間分から再取得）
   - `schedule` トリガーを使用せず外部からの `repository_dispatch` 起動を維持する構成のため、`schedule` 自動停止防止用の `.github/workflows/keepalive.yml` は不要となり削除しました。
 - **`.github/workflows/ci.yml` (`CI`)**
   - `main` ブランチへの `push` / `pull_request` 時に、`app.js`・`src/*.js` の構文チェック（`node --check`）とユニットテスト（`npm test`）を実行
@@ -102,7 +103,7 @@ npm run collect   # node src/collect.js
 # ポスター画像生成・合成を実行
 npm start         # node app.js（Puppeteer の詳細ログを出す場合は DEBUG_PUPPETEER=true を指定）
 
-# ユニットテストの実行（tests/*.test.js の全7スイート・33テストを実行）
+# ユニットテストの実行（tests/*.test.js の全7スイート・35テストを実行）
 npm test          # node --test tests/*.test.js
 ```
 
@@ -113,6 +114,7 @@ npm test          # node --test tests/*.test.js
 - `VRC_PROXY_AUTH_TOKEN`: `vrc-api-proxy` の Bearer 認証トークン（任意。指定時は `VRC_PROXY_TOKENS` より優先）
 - `VRC_PROXY_TOKENS`: `{"API_AUTH_TOKEN":"..."}` 形式の JSON 文字列（任意。`VRC_PROXY_AUTH_TOKEN` 未設定時に参照）
 - `BLACKLIST`: カンマ区切りの除外指定（任意）
+- `RESET_LAST_TWEET_ID`: `"true"` を指定すると `npm run collect` 実行時に保存済みの `lastTweetId` を無視し、`worldCache` のみ維持したまま直近24時間分から再取得（任意）
 - `DEBUG_PUPPETEER`: `"true"` を指定すると `app.js` 実行時に Puppeteer の詳細ログを出力（任意）
 
 ## 🔄 旧構成からの移行・停止案内

@@ -124,10 +124,60 @@ function getMaxTweetId(currentMaxId, posts) {
   return maxBigInt !== null ? maxBigInt.toString() : null;
 }
 
+/**
+ * 状態に手動オーバーライド（例: lastTweetId リセット）を適用する
+ * @param {{ version: number, lastTweetId: string | null, lastUpdatedAt: string | null, worldCache: Record<string, { hasQuest: boolean, expireAt: number }> }} state
+ * @param {{ resetLastTweetId?: boolean }} [options]
+ */
+function applyStateOverrides(state, { resetLastTweetId = false } = {}) {
+  if (!resetLastTweetId) {
+    return state;
+  }
+  return {
+    ...state,
+    lastTweetId: null,
+  };
+}
+
+/**
+ * キャプチャ結果に基づき lastTweetId を更新せず前回値を維持すべきか判定する
+ * 対象ツイートが存在し、1件も新規キャプチャできず、かつエラーが発生した場合のみ true
+ * @param {{ targetCount: number, capturedCount: number, errorCount: number }} stats
+ * @returns {boolean}
+ */
+function shouldPreserveLastTweetId({ targetCount = 0, capturedCount = 0, errorCount = 0 } = {}) {
+  return targetCount > 0 && capturedCount === 0 && errorCount > 0;
+}
+
+/**
+ * キャプチャ全面失敗時に前回の lastTweetId を維持しつつ worldCache のみ引き継いだ状態を生成する
+ * @param {object | null} prevState
+ * @param {object | null} nextState
+ * @param {number} [now=Date.now()]
+ */
+function buildStatePreservingLastTweetId(prevState, nextState, now = Date.now()) {
+  const mergedCache = {
+    ...(prevState?.worldCache && typeof prevState.worldCache === "object" ? prevState.worldCache : {}),
+    ...(nextState?.worldCache && typeof nextState.worldCache === "object" ? nextState.worldCache : {}),
+  };
+  return {
+    version: 1,
+    lastTweetId:
+      typeof prevState?.lastTweetId === "string" && SNOWFLAKE_ID_REGEX.test(prevState.lastTweetId)
+        ? prevState.lastTweetId
+        : null,
+    lastUpdatedAt: new Date(now).toISOString(),
+    worldCache: pruneWorldCache(mergedCache, now),
+  };
+}
+
 module.exports = {
   DEFAULT_CACHE_TTL_MS,
   pruneWorldCache,
   loadState,
   saveState,
   getMaxTweetId,
+  applyStateOverrides,
+  shouldPreserveLastTweetId,
+  buildStatePreservingLastTweetId,
 };
