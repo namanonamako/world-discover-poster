@@ -8,10 +8,11 @@ on:
 jobs:
   keepalive:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Keepalive Commit
         run: |
           git config --global user.name "github-actions[bot]"

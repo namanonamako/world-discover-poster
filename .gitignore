@@ -130,3 +130,10 @@ dist
 .pnp.*
 
 testhtml/
+
+# Generated poster artifacts & runtime state
+work/*.json
+work/*.jpg
+images/*.jpg
+images/posterInfo.json
+images/posterState.json

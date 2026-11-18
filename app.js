@@ -1,13 +1,18 @@
 const fs = require("fs");//ファイルコントロールシステム
 const path = require('path');
-const axios = require("axios");
 const puppeteer = require('puppeteer');
 const { loadImage, createCanvas } = require('@napi-rs/canvas');
+const {
+    WORLD_ID_EXACT_REGEX,
+    normalizeTweetUrl,
+    parseBlackList,
+    sanitizeConsoleText,
+} = require("./src/utils");
+const { isAllowedEmbedRequestUrl, isValidOembedHtml } = require("./src/embed-guard");
 
 // ブラックリストを環境変数から取得（カンマ区切りで入力されることを想定）
-const blackListEnv = process.env.BLACKLIST || "";
-const blackList = blackListEnv ? blackListEnv.split(',').map(id => id.trim()).filter(id => id.length > 0) : [];
-console.log(`ロードされたブラックリスト: ${blackList}`);
+const blackList = parseBlackList(process.env.BLACKLIST);
+console.log(`ロードされたブラックリスト件数: ${blackList.length}`);
 
 // タイルのサイズ
 const tileWidth = 550;
@@ -69,22 +74,100 @@ async function create_merged_picture(platform_name, isDarkMode, imageID) {
     await fs.promises.writeFile(`images/${platform_name}${isDarkMode ? "_d" : ""}_${imageID}.jpg`, pngData);
 }
 
+const MAX_OEMBED_BYTES = 1024 * 1024;
+const ALLOWED_OEMBED_HOSTS = new Set(["publish.x.com", "publish.twitter.com"]);
+
+/**
+ * oEmbed API から安全に JSON を取得する（最大2リダイレクト、許可ホスト・サイズ上限付き）
+ * @param {string} initialUrl
+ * @returns {Promise<{ html?: string }>}
+ */
+async function fetchOembedJson(initialUrl) {
+    let currentUrl = initialUrl;
+    for (let redirects = 0; redirects <= 2; redirects++) {
+        const parsed = new URL(currentUrl);
+        if (parsed.protocol !== "https:" || !ALLOWED_OEMBED_HOSTS.has(parsed.hostname.toLowerCase())) {
+            throw new Error("Disallowed oEmbed redirect target");
+        }
+
+        const response = await fetch(currentUrl, {
+            method: "GET",
+            redirect: "manual",
+            signal: AbortSignal.timeout(15000),
+        });
+
+        if (response.status >= 300 && response.status < 400) {
+            const location = response.headers.get("location");
+            await response.body?.cancel?.().catch(() => {});
+            if (!location || redirects === 2) {
+                throw new Error(`Too many or invalid redirects (HTTP ${response.status})`);
+            }
+            currentUrl = new URL(location, currentUrl).toString();
+            continue;
+        }
+
+        if (!response.ok) {
+            await response.body?.cancel?.().catch(() => {});
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const contentLength = Number.parseInt(response.headers.get("content-length") || "", 10);
+        if (!Number.isNaN(contentLength) && contentLength > MAX_OEMBED_BYTES) {
+            await response.body?.cancel?.().catch(() => {});
+            throw new Error("oEmbed response too large");
+        }
+
+        const text = await response.text();
+        if (Buffer.byteLength(text, "utf-8") > MAX_OEMBED_BYTES) {
+            throw new Error("oEmbed response exceeds size limit");
+        }
+        return JSON.parse(text);
+    }
+    throw new Error("oEmbed redirect loop");
+}
+
 /**
  * URLからTweet画像を生成する
+ * @param {import('puppeteer').Browser} browser
  * @param {string} tweetUrl 生成元のURL
- * @param {string} path 生成した画像の保存先パス
+ * @param {string} filePath 生成した画像の保存先パス
+ * @param {boolean} isDarkMode ダークモードかどうか
  */
-async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
+async function screenshot_tweet_pic(browser, tweetUrl, filePath, isDarkMode) {
     let result = "error";
-    await axios.get(`https://publish.twitter.com/oembed?url=${tweetUrl}&partner=&hide_thread=false&theme=${isDarkMode ? "dark" : "light"}`).then(async response => {
+    const normalizedUrl = normalizeTweetUrl(tweetUrl, "twitter.com");
+    if (!normalizedUrl) {
+        console.log("不正なツイートURL形式のためスキップします。");
+        return "no_media";
+    }
+
+    const oembedEndpoint = `https://publish.x.com/oembed?url=${encodeURIComponent(normalizedUrl)}&partner=&hide_thread=false&theme=${isDarkMode ? "dark" : "light"}`;
+
+    try {
+        const oembedData = await fetchOembedJson(oembedEndpoint);
+        if (!isValidOembedHtml(oembedData?.html)) {
+            console.log("oEmbedレスポンスのHTMLが不正または未許可要素を含むためスキップします。");
+            return "error";
+        }
+
+        let page;
         try {
-            const page = await browser.newPage();
+            page = await browser.newPage();
             await page.emulateTimezone('Asia/Tokyo');
             await page.setViewport({ width: Math.ceil(550), height: Math.ceil(800) });
-            // デバッグ用に console.log を nodejs 側に渡す
-            page.on('console', msg => console.log(msg.text()));
+            await page.setRequestInterception(true);
+            page.on('request', req => {
+                if (isAllowedEmbedRequestUrl(req.url())) {
+                    req.continue().catch(() => {});
+                } else {
+                    req.abort().catch(() => {});
+                }
+            });
+            if (process.env.DEBUG_PUPPETEER === "true") {
+                page.on('console', msg => console.log(sanitizeConsoleText(msg.text())));
+            }
             // Twitterの埋め込みリンクを開く
-            await page.setContent(`<body bgcolor="${isDarkMode ? 'black' : 'white'}"></body>${response.data.html}`, { waitUntil: 'domcontentloaded' });
+            await page.setContent(`<body bgcolor="${isDarkMode ? 'black' : 'white'}"></body>${oembedData.html}`, { waitUntil: 'domcontentloaded' });
             const iframeHandle = await page.waitForSelector('#twitter-widget-0');
             const frame = await iframeHandle.contentFrame();
             await frame.waitForNavigation({ waitUntil: 'networkidle0' });
@@ -114,9 +197,8 @@ async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
 
             if (!hasMediaOrVrcLink) {
                 console.log("このツイートには画像もVRChatのリンクも含まれていないため、スキップ対象として判定しました。");
-                await page.close();
                 result = "no_media";
-                return;
+                return result;
             }
 
             // センシティブボタンが存在するか確認
@@ -135,16 +217,19 @@ async function screenshot_tweet_pic(browser, tweetUrl, path, isDarkMode) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             console.log(`フレームの描画が完了しました。`);
 
-            await page.screenshot({ path: path });
+            await page.screenshot({ path: filePath });
             console.log(`キャプチャしました`);
-            await page.close();
             result = "success";
         } catch (e) {
-            console.log("キャプチャに失敗しました。");
+            console.log(`キャプチャに失敗しました: ${sanitizeConsoleText(e.message)}`);
+        } finally {
+            if (page && !page.isClosed()) {
+                await page.close().catch(() => {});
+            }
         }
-    }).catch(err => {
-        console.log(`ツイート情報取得エラー: ${err.message}`);
-    });
+    } catch (err) {
+        console.log(`ツイート情報取得エラー: ${sanitizeConsoleText(err.message)}`);
+    }
     return result;
 }
 
@@ -156,48 +241,56 @@ const MAX_TWEETPIC_NUM = 36;
  * @param {any} datas
  */
 async function create_basepic(platform_name, datas) {
-    var pic_count = 0;
+    let pic_count = 0;
     const world_id_array = [];
-    console.log(datas);
+    console.log(`${platform_name} 対象ツイート件数: ${Array.isArray(datas) ? datas.length : 0}`);
     let browser;
     try {
         const puppeteerOptions = {
             headless: 'new',
             args: ['--disable-gpu', '--incognito', '--no-first-run', '--no-zygote', '--no-sandbox', '--disable-setuid-sandbox']
         };
-        // GitHub Actions環境等のLinux向けにシステムChromeを指定（存在する場合）
-        if (process.env.CI || fs.existsSync('/usr/bin/google-chrome')) {
+        // Linux環境でシステムChromeが存在する場合に指定
+        if (fs.existsSync('/usr/bin/google-chrome')) {
             puppeteerOptions.executablePath = '/usr/bin/google-chrome';
         }
         browser = await puppeteer.launch(puppeteerOptions);
         for (let i = 0; i < datas.length; i++) {
             try {
                 if (pic_count >= MAX_TWEETPIC_NUM) break;
+                const itemUrl = typeof datas[i]?.url === "string" ? datas[i].url : "";
+                if (!itemUrl) continue;
 
-                const containsBlacklistWord = blackList.some(blackListID => datas[i].url.includes(blackListID));
+                const lowerItemUrl = itemUrl.toLowerCase();
+                const containsBlacklistWord = blackList.some(blackListID => lowerItemUrl.includes(blackListID.toLowerCase()));
                 if (containsBlacklistWord) {
-                    console.log(`BlackList対象です:${datas[i].url}`);
+                    console.log("BlackList対象ツイートをスキップしました。");
                 } else {
                     let status = "error";
+                    const filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
+                    const filePath_d = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
                     for (let retry = 0; retry < 3; retry++) {
                         console.log(`${pic_count + 1}枚目の処理を開始します (Try ${retry + 1})`);
-                        var filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
-                        const res1 = await screenshot_tweet_pic(browser, datas[i].url, filePath, false);
+                        const res1 = await screenshot_tweet_pic(browser, itemUrl, filePath, false);
 
                         if (res1 === "no_media") {
                             status = "no_media";
                             break;
                         }
+                        if (res1 !== "success") {
+                            console.log(`ライトモードのキャプチャに失敗したため、3秒待機してリトライします...`);
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            continue;
+                        }
 
                         console.log(`${pic_count + 1}枚目ダークモードの処理を開始します (Try ${retry + 1})`);
-                        var filePath_d = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
-                        const res2 = await screenshot_tweet_pic(browser, datas[i].url, filePath_d, true);
+                        const res2 = await screenshot_tweet_pic(browser, itemUrl, filePath_d, true);
 
-                        if (res1 === "success" && res2 === "success") {
+                        if (res2 === "success") {
                             status = "success";
                             break;
                         } else {
-                            console.log(`キャプチャに失敗したため、3秒待機してリトライします...`);
+                            console.log(`ダークモードのキャプチャに失敗したため、3秒待機してリトライします...`);
                             await new Promise(resolve => setTimeout(resolve, 3000));
                         }
                     }
@@ -205,63 +298,64 @@ async function create_basepic(platform_name, datas) {
                     if (status === "success") {
                         console.log(`${pic_count + 1}枚目の出力が完了しました`);
                         // ワールドIDを保存 (v2: worldId / v1: world_id)
-                        const worldId = datas[i].worldId || datas[i].world_id || "";
+                        const rawWorldId = datas[i].worldId || datas[i].world_id || "";
+                        const worldId = typeof rawWorldId === "string" && WORLD_ID_EXACT_REGEX.test(rawWorldId)
+                            ? rawWorldId.toLowerCase()
+                            : "";
                         world_id_array.push(worldId);
                         pic_count += 1;
-                    } else if (status === "no_media") {
-                        console.log(`${datas[i].url} は画像が含まれていないためスキップします。`);
                     } else {
-                        console.log(`${datas[i].url} のキャプチャに完全に失敗したためスキップし、次のツイートを処理します。`);
+                        // 片側のみ生成された孤立ファイルを削除
+                        await fs.promises.unlink(filePath).catch(() => {});
+                        await fs.promises.unlink(filePath_d).catch(() => {});
+                        if (status === "no_media") {
+                            console.log(`${sanitizeConsoleText(itemUrl)} は画像が含まれていないためスキップします。`);
+                        } else {
+                            console.log(`${sanitizeConsoleText(itemUrl)} のキャプチャに完全に失敗したためスキップし、次のツイートを処理します。`);
+                        }
                     }
                 }
             } catch (e) {
-                console.log(e.message);
+                console.log(sanitizeConsoleText(e.message));
                 console.log(`${pic_count + 1}枚目の処理中に予期せぬエラーが発生しました。`);
             }
-        };
+        }
     } finally {
         if (browser) await browser.close();
     }
-    console.log(world_id_array);
+    console.log(`${platform_name} 抽出ワールドID件数: ${world_id_array.length}`);
     const key = `${platform_name}WorldID`;
     json_data[key] = world_id_array;
     // 前回更新分から足りない画像を移動
     const results = [];
     let moved_count = 0;
     for (let i = pic_count; i < MAX_TWEETPIC_NUM; i++) {
-        try {
-            const old_filePath = path.join("work/", `base_${platform_name}_${moved_count}.jpg`);
-            const filePath = path.join("images/", `base_${platform_name}_${i}.jpg`);
-            const old_filePath_d = path.join("work/", `base_${platform_name}_d_${moved_count}.jpg`);
-            const filePath_d = path.join("images/", `base_${platform_name}_d_${i}.jpg`);
-            console.log(`${i + 1}枚目の移動を開始します`);
-            results.push((async () => {
-                if (fs.existsSync(old_filePath) && fs.statSync(old_filePath).size > 0) {
-                    try {
-                        await fs.promises.copyFile(old_filePath, filePath);
-                        console.log(`${i + 1}枚目の移動が完了しました`);
-                    } catch (err) {
-                        console.log(err);
-                        throw err;
-                    }
+        const old_filePath = path.join("work/", `base_${platform_name}_${moved_count}.jpg`);
+        const filePath = path.join("images/", `base_${platform_name}_${i}.jpg`);
+        const old_filePath_d = path.join("work/", `base_${platform_name}_d_${moved_count}.jpg`);
+        const filePath_d = path.join("images/", `base_${platform_name}_d_${i}.jpg`);
+        console.log(`${i + 1}枚目の移動を開始します`);
+        results.push((async () => {
+            if (fs.existsSync(old_filePath) && fs.statSync(old_filePath).size > 0) {
+                try {
+                    await fs.promises.copyFile(old_filePath, filePath);
+                    console.log(`${i + 1}枚目の移動が完了しました`);
+                } catch (err) {
+                    console.log(sanitizeConsoleText(err.message));
                 }
-                if (fs.existsSync(old_filePath_d) && fs.statSync(old_filePath_d).size > 0) {
-                    try {
-                        await fs.promises.copyFile(old_filePath_d, filePath_d);
-                        console.log(`${i + 1}枚目ダークモードの移動が完了しました`);
-                    } catch (err) {
-                        console.log(err);
-                        throw err;
-                    }
+            }
+            if (fs.existsSync(old_filePath_d) && fs.statSync(old_filePath_d).size > 0) {
+                try {
+                    await fs.promises.copyFile(old_filePath_d, filePath_d);
+                    console.log(`${i + 1}枚目ダークモードの移動が完了しました`);
+                } catch (err) {
+                    console.log(sanitizeConsoleText(err.message));
                 }
-            })());
-            moved_count += 1;
-        } catch (e) {
-            console.log(e.message);
-            console.log(`${i + 1}枚目の移動に失敗しました。`);
-        }
+            }
+        })());
+        moved_count += 1;
     }
-    await Promise.all(results);
+    await Promise.allSettled(results);
 }
 
 var json_data = {};
@@ -273,24 +367,30 @@ async function create_poster_info_json() {
     const json_file_path = "images/posterInfo.json";
 
 
-    var pc_world_ids_fixed = json_data["PCWorldID"];
-    var quest_world_ids_fixed = json_data["QuestWorldID"];
+    var pc_world_ids_fixed = json_data["PCWorldID"] || [];
+    var quest_world_ids_fixed = json_data["QuestWorldID"] || [];
 
     // 前回処理分の読み込み
     if (fs.existsSync(old_json_file_path)) {
         try {
             const content = await fs.promises.readFile(old_json_file_path, "utf-8");
             const infos = JSON.parse(content);
-            pc_world_ids_fixed = pc_world_ids_fixed.concat(infos.PCWorldID).slice(0, MAX_TWEETPIC_NUM);
-            quest_world_ids_fixed = quest_world_ids_fixed.concat(infos.QuestWorldID).slice(0, MAX_TWEETPIC_NUM);
+            if (Array.isArray(infos.PCWorldID)) {
+                pc_world_ids_fixed = pc_world_ids_fixed.concat(infos.PCWorldID).slice(0, MAX_TWEETPIC_NUM);
+            }
+            if (Array.isArray(infos.QuestWorldID)) {
+                quest_world_ids_fixed = quest_world_ids_fixed.concat(infos.QuestWorldID).slice(0, MAX_TWEETPIC_NUM);
+            }
         } catch (err) {
             console.error("Failed to read generic old json_file:", err.message);
         }
     }
 
     // 要素数を調整
-    json_data["PCWorldID"] = Array.from({ length: MAX_TWEETPIC_NUM }, (value, index) => pc_world_ids_fixed[index] || "");
-    json_data["QuestWorldID"] = Array.from({ length: MAX_TWEETPIC_NUM }, (value, index) => quest_world_ids_fixed[index] || "");
+    const sanitizeWorldId = (id) =>
+        typeof id === "string" && WORLD_ID_EXACT_REGEX.test(id) ? id.toLowerCase() : "";
+    json_data["PCWorldID"] = Array.from({ length: MAX_TWEETPIC_NUM }, (_value, index) => sanitizeWorldId(pc_world_ids_fixed[index]));
+    json_data["QuestWorldID"] = Array.from({ length: MAX_TWEETPIC_NUM }, (_value, index) => sanitizeWorldId(quest_world_ids_fixed[index]));
 
     json_data["ver"] = "v1.1";
     json_data["message"] = "Tweetを30分毎に取得します\n<color=blue>#VRChat_world紹介</color>\n<color=green>#VRChat_quest_world</color>";
@@ -307,13 +407,16 @@ async function main() {
 
     if (fs.existsSync(sorce_json_file_path)) {
         const content = fs.readFileSync(sorce_json_file_path, "utf-8");
-        console.log(content);
         const posterData = JSON.parse(content);
         
         // v2: pcWorlds / v1: PCWorld
-        const pcData = posterData.pcWorlds || posterData.PCWorld || [];
+        const pcData = Array.isArray(posterData.pcWorlds || posterData.PCWorld)
+            ? (posterData.pcWorlds || posterData.PCWorld)
+            : [];
         // v2: questWorlds / v1: QuestWorld
-        const questData = posterData.questWorlds || posterData.QuestWorld || [];
+        const questData = Array.isArray(posterData.questWorlds || posterData.QuestWorld)
+            ? (posterData.questWorlds || posterData.QuestWorld)
+            : [];
         
         await create_basepic("PC", pcData);
         await create_basepic("Quest", questData);
@@ -327,7 +430,13 @@ async function main() {
 
     }
 
-    create_poster_info_json();
+    await create_poster_info_json();
+
+    const nextStatePath = path.join("work", "nextPosterState.json");
+    if (fs.existsSync(nextStatePath)) {
+        await fs.promises.copyFile(nextStatePath, path.join("images", "posterState.json"));
+        console.log("posterState.json を images ディレクトリへ出力しました。");
+    }
 }
 // #regiton test
 
@@ -335,7 +444,10 @@ async function main() {
 
 // #endregion
 
-main();
+main().catch((err) => {
+    console.error("Poster generation failed:", sanitizeConsoleText(err.message));
+    process.exit(1);
+});
 
 
 
