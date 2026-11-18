@@ -40,7 +40,7 @@ IFTTT や外部収集サーバーに依存せず、GitHub Actions と GitHub Pag
    - 収集結果を `work/posterData.json`、次回用状態を `work/nextPosterState.json` として保存します。
 4. **埋め込み描画・タイル合成（`node app.js`）**
    - GCP 認証用環境変数（`GOOGLE_APPLICATION_CREDENTIALS`、`CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE`、`GOOGLE_GHA_CREDS_PATH`）を明示的に空文字にした状態で実行されます。
-   - `work/posterData.json` を読み込み、`src/embed-guard.js` による oEmbed HTML・リクエスト先検証を行いつつ、Puppeteer でライトモード／ダークモードのスクリーンショットを撮影します（画像または `vrchat.com` リンクを含まない投稿はスキップ）。
+   - `work/posterData.json` を読み込み、`src/embed-guard.js` による oEmbed HTML（状態機械ベース）・リクエスト先検証および CSP（`Content-Security-Policy`）`<meta>` 付与を行いつつ、Puppeteer でライトモード／ダークモードのスクリーンショットを撮影します（画像または `vrchat.com` リンクを含まない投稿はスキップ）。
    - 新規撮影分が36枚に満たない枠は `work/` に復元した前回画像で補完し、`@napi-rs/canvas` で 2×3 タイル（各タイル 550×800）に合成して `images/` ディレクトリに出力します（`{PC|Quest}_{0..5}.jpg` / `{PC|Quest}_d_{0..5}.jpg`）。
    - 前回分をマージした `images/posterInfo.json` と、次回実行用の `images/posterState.json` を出力します。
 5. **GitHub Pages デプロイ（`deploy` ジョブ）**
@@ -102,7 +102,7 @@ npm run collect   # node src/collect.js
 # ポスター画像生成・合成を実行
 npm start         # node app.js（Puppeteer の詳細ログを出す場合は DEBUG_PUPPETEER=true を指定）
 
-# ユニットテストの実行（tests/*.test.js の全7スイート・31テストを実行）
+# ユニットテストの実行（tests/*.test.js の全7スイート・33テストを実行）
 npm test          # node --test tests/*.test.js
 ```
 

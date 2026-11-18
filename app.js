@@ -166,8 +166,9 @@ async function screenshot_tweet_pic(browser, tweetUrl, filePath, isDarkMode) {
             if (process.env.DEBUG_PUPPETEER === "true") {
                 page.on('console', msg => console.log(sanitizeConsoleText(msg.text())));
             }
-            // Twitterの埋め込みリンクを開く
-            await page.setContent(`<body bgcolor="${isDarkMode ? 'black' : 'white'}"></body>${oembedData.html}`, { waitUntil: 'domcontentloaded' });
+            // Twitterの埋め込みリンクを開く (インラインスクリプト等を遮断する CSP を先頭に付与)
+            const cspMeta = '<meta http-equiv="Content-Security-Policy" content="script-src https://platform.x.com https://platform.twitter.com https://*.twimg.com; object-src \'none\'; base-uri \'none\';">';
+            await page.setContent(`${cspMeta}<body bgcolor="${isDarkMode ? 'black' : 'white'}">${oembedData.html}</body>`, { waitUntil: 'domcontentloaded' });
             const iframeHandle = await page.waitForSelector('#twitter-widget-0');
             const frame = await iframeHandle.contentFrame();
             await frame.waitForNavigation({ waitUntil: 'networkidle0' });
