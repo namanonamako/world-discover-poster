@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -39,7 +40,7 @@ jobs:
             local url="$1"
             local dest="$2"
             local code
-            code=$(curl --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 30 --max-filesize 10485760 -s -w "%{http_code}" -o "$dest" "$url") || {
+            code=$(curl --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 30 --max-filesize 10485760 -s -w "%{http_code}" -o "$dest" "$url") || {
               rm -f "$dest"
               echo "Failed to fetch $url (curl error)" >&2
               return 1
@@ -65,11 +66,63 @@ jobs:
           fetch_optional "https://namanonamako.github.io/world-discover-poster/posterState.json" "work/posterState.json"
           find work -type f -empty -delete
 
+      - name: Authenticate to Google Cloud
+        id: gcp_auth
+        if: ${{ secrets.WIF_PROVIDER != '' && secrets.GCP_SA != '' && (secrets.GCP_PROJECT_ID != '' || vars.GCP_PROJECT_ID != '') }}
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: Get VRC_PROXY_TOKENS from Secret Manager
+        id: gcp_secrets
+        if: ${{ steps.gcp_auth.outcome == 'success' }}
+        uses: google-github-actions/get-secretmanager-secrets@2b5f97c5a4b9c105e64646762ad4fc3f5128e6f5 # v2
+        with:
+          secrets: |-
+            vrc_proxy_tokens:${{ secrets.GCP_PROJECT_ID || vars.GCP_PROJECT_ID }}/VRC_PROXY_TOKENS
+
+      - name: Extract and mask API_AUTH_TOKEN
+        id: proxy_token
+        if: ${{ steps.gcp_secrets.outcome == 'success' }}
+        env:
+          VRC_PROXY_TOKENS_RAW: ${{ steps.gcp_secrets.outputs.vrc_proxy_tokens }}
+        run: |
+          TOKEN=$(printf '%s' "$VRC_PROXY_TOKENS_RAW" | jq -r '.API_AUTH_TOKEN // empty')
+          if [ -n "$TOKEN" ]; then
+            echo "::add-mask::$TOKEN"
+            {
+              echo "vrc_proxy_auth_token<<__EOF__"
+              printf '%s\n' "$TOKEN"
+              echo "__EOF__"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Revoke local GCP credential files and env vars
+        if: ${{ always() && steps.gcp_auth.outcome == 'success' }}
+        run: |
+          for var in GOOGLE_GHA_CREDS_PATH GOOGLE_APPLICATION_CREDENTIALS CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE; do
+            val="${!var:-}"
+            if [ -n "$val" ] && [ -f "$val" ]; then
+              CRED_SRC=$(jq -r '.credential_source.file // empty' "$val" 2>/dev/null || true)
+              if [ -n "$CRED_SRC" ] && [ -f "$CRED_SRC" ]; then
+                rm -f "$CRED_SRC"
+              fi
+              rm -f "$val"
+            fi
+          done
+          rm -f "${GITHUB_WORKSPACE}"/gha-creds-*.json
+          {
+            echo "GOOGLE_APPLICATION_CREDENTIALS="
+            echo "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="
+            echo "GOOGLE_GHA_CREDS_PATH="
+          } >> "$GITHUB_ENV"
+
       - name: Collect world introductions from Weir
         env:
           WEIR_API_KEY: ${{ secrets.WEIR_API_KEY }}
-          VRC_PROXY_URL: ${{ secrets.VRC_PROXY_URL }}
-          VRC_PROXY_AUTH_TOKEN: ${{ secrets.VRC_PROXY_AUTH_TOKEN }}
+          VRC_PROXY_URL: ${{ vars.VRC_PROXY_URL || secrets.VRC_PROXY_URL }}
+          VRC_PROXY_AUTH_TOKEN: ${{ secrets.VRC_PROXY_AUTH_TOKEN || steps.proxy_token.outputs.vrc_proxy_auth_token }}
           BLACKLIST: ${{ vars.BLACKLIST }}
         run: node src/collect.js
 
@@ -84,16 +137,13 @@ jobs:
       - name: Generate poster images
         env:
           BLACKLIST: ${{ vars.BLACKLIST }}
+          GOOGLE_APPLICATION_CREDENTIALS: ""
+          CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: ""
+          GOOGLE_GHA_CREDS_PATH: ""
         run: node app.js
 
       - name: Check results
         run: ls -ltr images
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: my_site
-          path: images
-          retention-days: 1
 
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:

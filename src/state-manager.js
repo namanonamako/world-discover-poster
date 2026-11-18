@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { WORLD_ID_EXACT_REGEX } = require("./utils");
+const { WORLD_ID_EXACT_REGEX, sanitizeConsoleText } = require("./utils");
 
 const DEFAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7日間
 const SNOWFLAKE_ID_REGEX = /^\d+$/;
@@ -68,7 +68,7 @@ function loadState(filePath, now = Date.now()) {
       worldCache: pruneWorldCache(parsed?.worldCache, now),
     };
   } catch (error) {
-    console.warn(`Failed to load poster state from ${filePath}: ${error.message}`);
+    console.warn(`Failed to load poster state from ${filePath}: ${sanitizeConsoleText(error?.message ?? error)}`);
     return emptyState;
   }
 }

@@ -137,3 +137,4 @@ work/*.jpg
 images/*.jpg
 images/posterInfo.json
 images/posterState.json
+gha-creds-*.json

@@ -3,7 +3,7 @@ const path = require("node:path");
 const { WeirClient } = require("./weir-client");
 const { UrlExpander } = require("./url-expander");
 const { WorldIdExtractor } = require("./world-id-extractor");
-const { VRChatApiClient } = require("./vrchat-client");
+const { VRChatApiClient, resolveProxyAuthToken } = require("./vrchat-client");
 const { loadState, saveState } = require("./state-manager");
 const { collectWorldIntroductions } = require("./collector");
 const { parseBlackList, sanitizeConsoleText } = require("./utils");
@@ -11,7 +11,10 @@ const { parseBlackList, sanitizeConsoleText } = require("./utils");
 async function main() {
   const weirApiKey = process.env.WEIR_API_KEY || "";
   const proxyUrl = process.env.VRC_PROXY_URL || "";
-  const authToken = process.env.VRC_PROXY_AUTH_TOKEN || "";
+  const authToken = resolveProxyAuthToken({
+    authToken: process.env.VRC_PROXY_AUTH_TOKEN,
+    proxyTokensJson: process.env.VRC_PROXY_TOKENS,
+  });
   const blackList = parseBlackList(process.env.BLACKLIST);
 
   const stateInputPath = path.join("work", "posterState.json");
@@ -45,6 +48,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Collection failed:", sanitizeConsoleText(err.message));
+  console.error("Collection failed:", sanitizeConsoleText(err?.message ?? err));
   process.exit(1);
 });

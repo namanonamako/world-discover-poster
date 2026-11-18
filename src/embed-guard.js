@@ -47,8 +47,8 @@ function isValidOembedHtml(html) {
     return false;
   }
 
-  // イベントハンドラ属性・危険タグ・危険スキームを拒否
-  if (/(?:^|[\s<])on[a-z]+\s*=/i.test(html)) {
+  // イベントハンドラ属性・危険タグ・危険スキームを拒否 (<img/onerror=...> も含む)
+  if (/(?:^|[\s<\/])on[a-z]+\s*=/i.test(html)) {
     return false;
   }
   if (/<(?:iframe|svg|object|embed|meta|base|link)\b/i.test(html)) {

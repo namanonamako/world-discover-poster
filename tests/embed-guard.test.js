@@ -57,6 +57,10 @@ describe("embed-guard", () => {
       false
     );
     assert.equal(
+      isValidOembedHtml('<blockquote class="twitter-tweet"><img/onerror="alert(1)" src="x"></blockquote>'),
+      false
+    );
+    assert.equal(
       isValidOembedHtml('<blockquote class="twitter-tweet"><svg onload="alert(1)"></svg></blockquote>'),
       false
     );
