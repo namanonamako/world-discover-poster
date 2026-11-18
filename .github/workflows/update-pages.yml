@@ -66,9 +66,22 @@ jobs:
           fetch_optional "https://namanonamako.github.io/world-discover-poster/posterState.json" "work/posterState.json"
           find work -type f -empty -delete
 
+      - name: Check GCP WIF configuration
+        id: gcp_config
+        env:
+          WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
+          GCP_SA: ${{ secrets.GCP_SA }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || vars.GCP_PROJECT_ID }}
+        run: |
+          if [ -n "$WIF_PROVIDER" ] && [ -n "$GCP_SA" ] && [ -n "$GCP_PROJECT_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Authenticate to Google Cloud
         id: gcp_auth
-        if: ${{ secrets.WIF_PROVIDER != '' && secrets.GCP_SA != '' && (secrets.GCP_PROJECT_ID != '' || vars.GCP_PROJECT_ID != '') }}
+        if: ${{ steps.gcp_config.outputs.enabled == 'true' }}
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
