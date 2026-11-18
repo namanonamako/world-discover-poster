@@ -1,7 +1,7 @@
 # World Discover Poster (VRChat World紹介ポスター自動生成)
 
 X（旧Twitter）に投稿されたVRChatのワールド紹介投稿を Weir API で自動収集・キャプチャし、一枚のポスター画像（一覧画像）として合成・出力するシステムです。
-IFTTT や外部収集サーバーに依存せず、GitHub Actions と GitHub Pages による単独構成で定期実行とデプロイを完全自動で行います。
+IFTTT や外部収集サーバーに依存せず、GitHub Actions と GitHub Pages で投稿収集・画像生成・デプロイを自動実行します（外部からの `repository_dispatch` 起動および手動実行に対応）。
 
 ## ✨ 主な機能
 
@@ -20,7 +20,7 @@ IFTTT や外部収集サーバーに依存せず、GitHub Actions と GitHub Pag
 - **Google Cloud Workload Identity Federation / Secret Manager**（任意）: `vrc-api-proxy` 認証トークン（`VRC_PROXY_TOKENS` 内 `API_AUTH_TOKEN`）の安全な取得
 - **Puppeteer**: X の oEmbed API（`https://publish.x.com/oembed`）を用いた埋め込みレンダリング＆スクリーンショット撮影
 - **@napi-rs/canvas**: 取得したスクリーンショットを 2×3 タイル状のポスター画像へ合成
-- **GitHub Actions / GitHub Pages**: 定期実行・CI 検証・生成物および状態ファイルのホスティング
+- **GitHub Actions / GitHub Pages**: ワークフロー実行（`repository_dispatch` / `workflow_dispatch`）・CI 検証・生成物および状態ファイルのホスティング
 
 ## 🚀 動作の仕組み（処理フロー）
 
@@ -79,15 +79,14 @@ Quest 自動判定で GCP WIF 連携を利用する場合は、対象プロジ�
 }
 ```
 
-### 実行スケジュールとワークフロー
+### ワークフローと起動トリガー
 
 - **`.github/workflows/update-pages.yml` (`Publish GitHub Pages`)**
-  - `schedule`: `cron: '17,47 * * * *'`（毎時17分・47分の **30分毎** に自動実行）
+  - `repository_dispatch`（`types: [build_and_deploy]`）: 外部からのディスパッチイベント（`build_and_deploy`）を受けてビルドと GitHub Pages デプロイを実行
   - `workflow_dispatch`: 手動実行に対応
+  - `schedule` トリガーを使用せず外部からの `repository_dispatch` 起動を維持する構成のため、`schedule` 自動停止防止用の `.github/workflows/keepalive.yml` は不要となり削除しました。
 - **`.github/workflows/ci.yml` (`CI`)**
   - `main` ブランチへの `push` / `pull_request` 時に、`app.js`・`src/*.js` の構文チェック（`node --check`）とユニットテスト（`npm test`）を実行
-- **`.github/workflows/keepalive.yml` (`Keepalive Workflow`)**
-  - `schedule`: `cron: '0 0 1 * *'`（毎月1日）および `workflow_dispatch` でスケジュール実行停止防止用の空コミットを実行
 
 ## 🧪 ローカル実行・テスト
 

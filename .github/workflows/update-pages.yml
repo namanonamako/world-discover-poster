@@ -1,8 +1,8 @@
 name: Publish GitHub Pages
 
 on:
-  schedule:
-    - cron: '17,47 * * * *' # 30分毎 (毎時17分・47分に実行し混雑時間帯を回避)
+  repository_dispatch:
+    types: [build_and_deploy]
   workflow_dispatch:
 
 permissions:
