@@ -1,5 +1,6 @@
 const { DEFAULT_CACHE_TTL_MS, getMaxTweetId, pruneWorldCache } = require("./state-manager");
 const { normalizeTweetUrl } = require("./utils");
+const { DEFAULT_LIMIT, DEFAULT_MAX_PAGES } = require("./weir-client");
 
 const DEFAULT_SEARCH_QUERY =
   "(#VRChat_world紹介 OR #VRChat_quest_world) -filter:retweets -filter:replies";
@@ -87,7 +88,7 @@ function sortPostsLatestFirst(posts) {
  * @param {string[]} [options.blackList=[]]
  * @param {string} [options.query=DEFAULT_SEARCH_QUERY]
  * @param {number} [options.limit=50]
- * @param {number} [options.maxPages=3]
+ * @param {number} [options.maxPages=2]
  * @param {number} [options.now=Date.now()]
  * @returns {Promise<{ posterData: { pcWorlds: Array<{ url: string, worldId: string }>, questWorlds: Array<{ url: string, worldId: string }> }, nextState: object, stats: object }>}
  */
@@ -97,8 +98,8 @@ async function collectWorldIntroductions(
     state = { version: 1, lastTweetId: null, lastUpdatedAt: null, worldCache: {} },
     blackList = [],
     query = DEFAULT_SEARCH_QUERY,
-    limit = 50,
-    maxPages = 3,
+    limit = DEFAULT_LIMIT,
+    maxPages = DEFAULT_MAX_PAGES,
     now = Date.now(),
   } = {}
 ) {

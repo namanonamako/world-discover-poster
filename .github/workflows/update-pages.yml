@@ -33,6 +33,16 @@ jobs:
         run: |
           PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci
 
+      - name: Install multilingual fonts and locales
+        timeout-minutes: 5
+        run: |
+          APT_OPTS=(-o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=3)
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" install -y --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji language-pack-ja language-pack-zh-hans language-pack-ko
+          sudo locale-gen ja_JP.UTF-8 zh_CN.UTF-8 ko_KR.UTF-8
+          sudo update-locale LANG=ja_JP.UTF-8
+          echo "LANG=ja_JP.UTF-8" >> "$GITHUB_ENV"
+
       - name: Restore previous assets and state from GitHub Pages
         run: |
           mkdir -p work images
@@ -138,14 +148,6 @@ jobs:
           VRC_PROXY_AUTH_TOKEN: ${{ secrets.VRC_PROXY_AUTH_TOKEN || steps.proxy_token.outputs.vrc_proxy_auth_token }}
           BLACKLIST: ${{ vars.BLACKLIST }}
         run: node src/collect.js
-
-      - name: Install multilingual fonts and locales
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji language-pack-ja language-pack-zh-hans language-pack-ko
-          sudo locale-gen ja_JP.UTF-8 zh_CN.UTF-8 ko_KR.UTF-8
-          sudo update-locale LANG=ja_JP.UTF-8
-          echo "LANG=ja_JP.UTF-8" >> "$GITHUB_ENV"
 
       - name: Generate poster images
         env:

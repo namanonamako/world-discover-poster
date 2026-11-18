@@ -56,22 +56,41 @@ describe("WeirClient & parseRetryAfterSeconds", () => {
     assert.equal(capturedBodies[1].cursor, "cursor_1");
   });
 
-  it("stops pagination when cursor repeats or maxPages is reached", async () => {
-    let calls = 0;
-    const client = new WeirClient({
+  it("stops pagination when cursor repeats or default maxPages (2) is reached", async () => {
+    let repeatCalls = 0;
+    const repeatClient = new WeirClient({
       apiKey: "weir_live_secret",
       fetchImpl: async () => {
-        calls++;
+        repeatCalls++;
         return new Response(
-          JSON.stringify({ data: [{ id: String(calls) }], meta: { nextCursor: "same" } }),
+          JSON.stringify({ data: [{ id: String(repeatCalls) }], meta: { nextCursor: "same" } }),
           { status: 200 }
         );
       },
     });
 
-    const posts = await client.searchPosts({ query: "test", maxPages: 5 });
-    assert.equal(calls, 2);
-    assert.equal(posts.length, 2);
+    const repeatPosts = await repeatClient.searchPosts({ query: "test", maxPages: 5 });
+    assert.equal(repeatCalls, 2);
+    assert.equal(repeatPosts.length, 2);
+
+    let defaultMaxCalls = 0;
+    const defaultBodies = [];
+    const defaultClient = new WeirClient({
+      apiKey: "weir_live_secret",
+      fetchImpl: async (_url, init) => {
+        defaultMaxCalls++;
+        defaultBodies.push(JSON.parse(init.body));
+        return new Response(
+          JSON.stringify({ data: [{ id: String(defaultMaxCalls) }], meta: { nextCursor: `c_${defaultMaxCalls}` } }),
+          { status: 200 }
+        );
+      },
+    });
+
+    const defaultPosts = await defaultClient.searchPosts({ query: "test" });
+    assert.equal(defaultMaxCalls, 2);
+    assert.equal(defaultPosts.length, 2);
+    assert.equal(defaultBodies[1].cursor, "c_1");
   });
 
   it("retries on 429 and network/parse errors", async () => {
