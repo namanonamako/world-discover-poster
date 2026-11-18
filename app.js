@@ -9,6 +9,12 @@ const {
     sanitizeConsoleText,
 } = require("./src/utils");
 const { isAllowedEmbedRequestUrl, isValidOembedHtml } = require("./src/embed-guard");
+const {
+    loadState,
+    saveState,
+    shouldPreserveLastTweetId,
+    buildStatePreservingLastTweetId,
+} = require("./src/state-manager");
 
 // ブラックリストを環境変数から取得（カンマ区切りで入力されることを想定）
 const blackList = parseBlackList(process.env.BLACKLIST);
@@ -243,6 +249,10 @@ const MAX_TWEETPIC_NUM = 36;
  */
 async function create_basepic(platform_name, datas) {
     let pic_count = 0;
+    let targetCount = 0;
+    let capturedCount = 0;
+    let noMediaCount = 0;
+    let errorCount = 0;
     const world_id_array = [];
     console.log(`${platform_name} 対象ツイート件数: ${Array.isArray(datas) ? datas.length : 0}`);
     let browser;
@@ -267,6 +277,7 @@ async function create_basepic(platform_name, datas) {
                 if (containsBlacklistWord) {
                     console.log("BlackList対象ツイートをスキップしました。");
                 } else {
+                    targetCount += 1;
                     let status = "error";
                     const filePath = path.join("images/", `base_${platform_name}_${pic_count}.jpg`);
                     const filePath_d = path.join("images/", `base_${platform_name}_d_${pic_count}.jpg`);
@@ -305,18 +316,22 @@ async function create_basepic(platform_name, datas) {
                             : "";
                         world_id_array.push(worldId);
                         pic_count += 1;
+                        capturedCount += 1;
                     } else {
                         // 片側のみ生成された孤立ファイルを削除
                         await fs.promises.unlink(filePath).catch(() => {});
                         await fs.promises.unlink(filePath_d).catch(() => {});
                         if (status === "no_media") {
+                            noMediaCount += 1;
                             console.log(`${sanitizeConsoleText(itemUrl)} は画像が含まれていないためスキップします。`);
                         } else {
+                            errorCount += 1;
                             console.log(`${sanitizeConsoleText(itemUrl)} のキャプチャに完全に失敗したためスキップし、次のツイートを処理します。`);
                         }
                     }
                 }
             } catch (e) {
+                errorCount += 1;
                 console.log(sanitizeConsoleText(e.message));
                 console.log(`${pic_count + 1}枚目の処理中に予期せぬエラーが発生しました。`);
             }
@@ -357,6 +372,7 @@ async function create_basepic(platform_name, datas) {
         moved_count += 1;
     }
     await Promise.allSettled(results);
+    return { targetCount, capturedCount, noMediaCount, errorCount };
 }
 
 var json_data = {};
@@ -405,6 +421,7 @@ async function create_poster_info_json() {
 
 async function main() {
     const sorce_json_file_path = "work/posterData.json";
+    let captureSummary = { targetCount: 0, capturedCount: 0, errorCount: 0 };
 
     if (fs.existsSync(sorce_json_file_path)) {
         const content = fs.readFileSync(sorce_json_file_path, "utf-8");
@@ -419,8 +436,27 @@ async function main() {
             ? (posterData.questWorlds || posterData.QuestWorld)
             : [];
         
-        await create_basepic("PC", pcData);
-        await create_basepic("Quest", questData);
+        const pcStats = await create_basepic("PC", pcData);
+        const questStats = await create_basepic("Quest", questData);
+        captureSummary = {
+            targetCount: pcStats.targetCount + questStats.targetCount,
+            capturedCount: pcStats.capturedCount + questStats.capturedCount,
+            errorCount: pcStats.errorCount + questStats.errorCount,
+        };
+    }
+
+    const nextStatePath = path.join("work", "nextPosterState.json");
+    if (shouldPreserveLastTweetId(captureSummary)) {
+        const prevStatePath = path.join("work", "posterState.json");
+        const prevState = fs.existsSync(prevStatePath) ? loadState(prevStatePath) : null;
+        const nextState = fs.existsSync(nextStatePath) ? loadState(nextStatePath) : null;
+        saveState(
+            path.join("images", "posterState.json"),
+            buildStatePreservingLastTweetId(prevState, nextState)
+        );
+        throw new Error(
+            `すべての対象ツイート (${captureSummary.targetCount}件) のキャプチャに失敗したため、lastTweetId を更新せずデプロイを中断します (errors=${captureSummary.errorCount})`
+        );
     }
 
     for (let i = 0; i < 6; i++) {
@@ -433,7 +469,6 @@ async function main() {
 
     await create_poster_info_json();
 
-    const nextStatePath = path.join("work", "nextPosterState.json");
     if (fs.existsSync(nextStatePath)) {
         await fs.promises.copyFile(nextStatePath, path.join("images", "posterState.json"));
         console.log("posterState.json を images ディレクトリへ出力しました。");

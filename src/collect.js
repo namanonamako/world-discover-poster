@@ -4,7 +4,7 @@ const { WeirClient } = require("./weir-client");
 const { UrlExpander } = require("./url-expander");
 const { WorldIdExtractor } = require("./world-id-extractor");
 const { VRChatApiClient, resolveProxyAuthToken } = require("./vrchat-client");
-const { loadState, saveState } = require("./state-manager");
+const { loadState, saveState, applyStateOverrides } = require("./state-manager");
 const { collectWorldIntroductions } = require("./collector");
 const { parseBlackList, sanitizeConsoleText } = require("./utils");
 
@@ -16,12 +16,17 @@ async function main() {
     proxyTokensJson: process.env.VRC_PROXY_TOKENS,
   });
   const blackList = parseBlackList(process.env.BLACKLIST);
+  const resetLastTweetId = process.env.RESET_LAST_TWEET_ID === "true";
 
   const stateInputPath = path.join("work", "posterState.json");
   const stateOutputPath = path.join("work", "nextPosterState.json");
   const posterDataOutputPath = path.join("work", "posterData.json");
 
-  const state = loadState(stateInputPath);
+  const rawState = loadState(stateInputPath);
+  const state = applyStateOverrides(rawState, { resetLastTweetId });
+  if (resetLastTweetId && rawState.lastTweetId !== null) {
+    console.log("RESET_LAST_TWEET_ID=true: ignoring saved lastTweetId and keeping worldCache.");
+  }
   console.log(
     `Loaded poster state: lastTweetId=${state.lastTweetId ?? "none"}, cachedWorlds=${Object.keys(state.worldCache).length}`
   );

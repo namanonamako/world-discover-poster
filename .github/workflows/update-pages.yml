@@ -4,6 +4,12 @@ on:
   repository_dispatch:
     types: [build_and_deploy]
   workflow_dispatch:
+    inputs:
+      reset_last_tweet_id:
+        description: '保存済みの lastTweetId を無視して直近24時間分から再取得する (worldCache は維持)'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -147,6 +153,7 @@ jobs:
           VRC_PROXY_URL: ${{ vars.VRC_PROXY_URL || secrets.VRC_PROXY_URL }}
           VRC_PROXY_AUTH_TOKEN: ${{ secrets.VRC_PROXY_AUTH_TOKEN || steps.proxy_token.outputs.vrc_proxy_auth_token }}
           BLACKLIST: ${{ vars.BLACKLIST }}
+          RESET_LAST_TWEET_ID: ${{ github.event_name == 'workflow_dispatch' && (inputs.reset_last_tweet_id == true || inputs.reset_last_tweet_id == 'true') }}
         run: node src/collect.js
 
       - name: Generate poster images
