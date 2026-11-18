@@ -13,8 +13,11 @@ describe("collectWorldIntroductions", () => {
     const worldIdCached = "wrld_33333333-3333-3333-3333-333333333333";
 
     const vrcCalls = [];
+    let receivedSearchParams = null;
     const mockWeir = {
-      searchPosts: async () => [
+      searchPosts: async (params) => {
+        receivedSearchParams = params;
+        return [
         // 1. スパム (ハッシュタグ5個) - ただし lastTweetId は更新されるべき
         {
           id: "500",
@@ -68,7 +71,8 @@ describe("collectWorldIntroductions", () => {
             urls: [`https://vrchat.com/home/world/${worldIdPcOnly}`],
           },
         },
-      ],
+      ];
+      },
     };
 
     const mockVrchat = {
@@ -109,6 +113,8 @@ describe("collectWorldIntroductions", () => {
     ]);
 
     assert.deepEqual(vrcCalls, [worldIdQuest]);
+    assert.equal(receivedSearchParams.maxPages, 2);
+    assert.equal(receivedSearchParams.limit, 50);
     assert.equal(result.nextState.lastTweetId, "500");
     assert.equal(result.nextState.worldCache[worldIdQuest].hasQuest, true);
     assert.equal(result.stats.skippedSpam, 1);

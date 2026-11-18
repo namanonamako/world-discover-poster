@@ -1,6 +1,8 @@
 const { parseRetryAfterSeconds, sanitizeConsoleText } = require("./utils");
 
 const DEFAULT_BASE_URL = "https://api.weirapp.io";
+const DEFAULT_LIMIT = 50;
+const DEFAULT_MAX_PAGES = 2;
 const MAX_RETRY_WAIT_SECONDS = 60;
 
 class WeirClient {
@@ -29,21 +31,23 @@ class WeirClient {
    * @param {number} [params.limit=50]
    * @param {string | null} [params.sinceId=null]
    * @param {string | null} [params.since=null]
-   * @param {number} [params.maxPages=3]
+   * @param {number} [params.maxPages=2]
    * @returns {Promise<Array<object>>}
    */
   async searchPosts({
     query,
     sort = "latest",
-    limit = 50,
+    limit = DEFAULT_LIMIT,
     sinceId = null,
     since = null,
-    maxPages = 3,
+    maxPages = DEFAULT_MAX_PAGES,
   }) {
+    const effectiveMaxPages =
+      Number.isInteger(maxPages) && maxPages >= 1 ? maxPages : DEFAULT_MAX_PAGES;
     const posts = [];
     let cursor = null;
 
-    for (let page = 1; page <= maxPages; page++) {
+    for (let page = 1; page <= effectiveMaxPages; page++) {
       const payload = {
         query,
         sort,
@@ -66,9 +70,9 @@ class WeirClient {
       if (!nextCursor || pageItems.length === 0 || nextCursor === cursor) {
         break;
       }
-      if (page === maxPages) {
+      if (page === effectiveMaxPages) {
         console.warn(
-          `Weir API pagination reached maxPages (${maxPages}); remaining results may be truncated.`
+          `Weir API pagination reached maxPages (${effectiveMaxPages}); remaining results may be truncated.`
         );
         break;
       }
@@ -145,7 +149,7 @@ class WeirClient {
         const errBody = await response.json();
         errorCode = errBody?.error?.code || errBody?.code || errBody?.message || "";
       } catch {
-        // 無視
+        await response.body?.cancel?.().catch(() => {});
       }
       const detail = errorCode ? ` (${sanitizeConsoleText(String(errorCode).slice(0, 120))})` : "";
       throw new Error(`Weir API returned HTTP ${response.status}${detail}`);
@@ -155,4 +159,6 @@ class WeirClient {
 
 module.exports = {
   WeirClient,
+  DEFAULT_LIMIT,
+  DEFAULT_MAX_PAGES,
 };
